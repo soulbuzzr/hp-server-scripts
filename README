@@ -1,0 +1,5 @@
+Run the scripts as below using user cron:
+
+# m h  dom mon dow   command
+0 0 * * 0 timeout 6h /home/hpserver/System_scripts/spotlight_downloader.sh
+0 0 * * * /home/hpserver/System_scripts/bing_downloader.sh
