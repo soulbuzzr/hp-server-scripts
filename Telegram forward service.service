@@ -1,0 +1,19 @@
+Service running at /etc/systemd/system/tg-forward.service
+
+[Unit]
+Description=Telegram Forwarding Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hpserver
+WorkingDirectory=/home/hpserver/System_scripts
+
+ExecStart=/home/hpserver/System_scripts/tg-venv/bin/python tg_forward.py
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
