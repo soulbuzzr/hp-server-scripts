@@ -1,4 +1,3 @@
 hashes.txt
 session.session
-tg-venv/
-.env
+tg_forward.py
