@@ -32,8 +32,11 @@ health_emoji() {
 }
 
 # ================= CPU USAGE (1 min avg) =================
-CPU_ACTIVE=$(mpstat 1 60 | awk '/Average/ {printf "%d",100-$NF}')
-CPU_E=$(cpu_emoji "${CPU_ACTIVE%.*}")
+CPU_ACTIVE=$(mpstat 1 60 | awk '/Average/ {printf "%.2f",100-$NF}')
+
+# extract integer part for emoji logic
+CPU_INT=${CPU_ACTIVE%.*}
+CPU_E=$(cpu_emoji "$CPU_INT")
 
 
 # ================= DISK METRICS =================
@@ -47,15 +50,14 @@ disk_metrics() {
   TEMP_E=$(temp_emoji "$TEMP")
   REALLOC_E=$(health_emoji "$REALLOC")
 
-  printf "💽 *%s*\n• 🌡️ Temp: %s°C %s\n• ♻️ Reallocated: %s %s\n" \
+  printf "    💽 *%s*\n        • 🌡️ Temp: %s°C %s\n        • ♻️ Reallocated: %s %s\n" \
     "$LABEL" "$TEMP" "$TEMP_E" "$REALLOC" "$REALLOC_E"
 }
-
 DISK_BLOCK=""
 
-[ -b /dev/sda ] && DISK_BLOCK+="$(disk_metrics /dev/sda "sda – SSD")"$'\n'
-[ -b /dev/sdb ] && DISK_BLOCK+="$(disk_metrics /dev/sdb "sdb – Internal HDD")"$'\n'
-[ -b /dev/sdc ] && DISK_BLOCK+="$(disk_metrics /dev/sdc "sdc – External HDD")"$'\n'
+[ -b /dev/sda ] && DISK_BLOCK+="$(disk_metrics /dev/sda "SSD")"$'\n'
+[ -b /dev/sdb ] && DISK_BLOCK+="$(disk_metrics /dev/sdb "Internal HDD")"$'\n'
+[ -b /dev/sdc ] && DISK_BLOCK+="$(disk_metrics /dev/sdc "External HDD")"$'\n'
 
 # ================= LOG (FULL DETAILS) =================
 LOG_MSG="$HOST
@@ -70,10 +72,10 @@ echo "$LOG_MSG" >> "$LOG_FILE"
 TG_MSG="*$HOST*
 
 ⏱️ *Uptime*
-  $UPTIME
+    $UPTIME
 
-🧮 *CPU Usage*
-• $CPU_ACTIVE% $CPU_E
+🧮 *CPU*
+    • Active CPU Usage (1 min avg): $CPU_ACTIVE% $CPU_E
 
 🗄️ *Disk Health*
 $DISK_BLOCK
