@@ -1,6 +1,8 @@
-Service running at /etc/systemd/system/system-health-alerts.service
+Services running at /etc/systemd/system/<alert-type>-alerts.service
+
+1. /etc/systemd/system/cpu-load-alerts.service
 [Unit]
-Description=System Health Alerts
+Description=CPU Load Alerts
 After=network-online.target
 Wants=network-online.target
 
@@ -8,14 +10,90 @@ Wants=network-online.target
 Type=simple
 User=root
 
-# Telegram credentials
-Environment=TG_BOT_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-Environment=TG_CHAT_ID=xxxxxxxxx
+# PATH for all required binaries
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=/home/hpserver/System_scripts/cpu_load_alerts.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+2. /etc/systemd/system/cpu-temperature-alerts.service
+[Unit]
+Description=CPU Temperature Alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
 
 # PATH for all required binaries
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-ExecStart=/home/sughosha/System_Scripts/system_health_alerts_telegram.sh
+ExecStart=/home/hpserver/System_scripts/cpu_temp_alerts.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+3. /etc/systemd/system/gpu-temperature-alerts.service 
+[Unit]
+Description=GPU Temperature Alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+
+# PATH for all required binaries
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=/home/hpserver/System_scripts/gpu_temp_alerts.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+4. /etc/systemd/system/internal-hdd-health-alerts.service 
+[Unit]
+Description=Internal HDD Status Alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+
+# PATH for all required binaries
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=/home/hpserver/System_scripts/internal_hdd_health_alerts.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+5. /etc/systemd/system/ssd-health-alerts.service 
+[Unit]
+Description=SSD Status Alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+
+# PATH for all required binaries
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=/home/hpserver/System_scripts/ssd_health_alerts.sh
 Restart=always
 RestartSec=10
 
