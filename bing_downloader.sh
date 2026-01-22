@@ -2,14 +2,23 @@
 set -euo pipefail
 
 # ---------------------------------------------
-# Paths and DB
+# Create unique temp workspace (per run)
 # ---------------------------------------------
-RAMDISK="$HOME/Ramdisk"
+TMP_BASE="$(mktemp -d /tmp/bing-images.XXXXXX)"
+TMP_DL="$TMP_BASE/downloads"
 OUT="$HOME/Bing"
 DB="$OUT/hashes.txt"
 
-mkdir -p "$RAMDISK" "$OUT"
+mkdir -p "$TMP_DL" "$OUT"
 touch "$DB"
+
+# ---------------------------------------------
+# Cleanup on exit (success or failure)
+# ---------------------------------------------
+cleanup() {
+  rm -rf "$TMP_BASE"
+}
+trap cleanup EXIT
 
 # ---------------------------------------------
 # Regions you want to download from
@@ -59,7 +68,7 @@ for region in "${regions[@]}"; do
         fi
 
         url="https://www.bing.com${base}_UHD.jpg"
-        tmp="$RAMDISK/${clean_title}_${region}.jpg"
+        tmp="$TMP_DL/${clean_title}_${region}.jpg"
         final="$OUT/${clean_title} (${region}).jpg"
 
         echo "Downloading: ${clean_title} (${region})"

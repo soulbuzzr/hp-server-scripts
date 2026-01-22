@@ -1,0 +1,23 @@
+Service running at /etc/systemd/system/system-health-alerts.service
+[Unit]
+Description=System Health Alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+
+# Telegram credentials
+Environment=TG_BOT_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Environment=TG_CHAT_ID=xxxxxxxxx
+
+# PATH for all required binaries
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=/home/sughosha/System_Scripts/system_health_alerts_telegram.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
