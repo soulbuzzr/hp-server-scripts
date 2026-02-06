@@ -1,14 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
-# ================= CONFIG =================
-# Telegram notification integration (from cron env)
+# ================= LOAD SHARED LIB =================
+source "$HOME/System_Scripts/System_Health_Monitor/lib/health_lib.sh"
+
+# ================= VALIDATION =================
 : "${TG_BOT_TOKEN:?TG_BOT_TOKEN not set}"
 : "${TG_CHAT_ID:?TG_CHAT_ID not set}"
+: "${HOST_NAME:?Missing HOST_NAME}"
+
 LOG_FILE="/var/log/system_health.log"
 
 # ================= BASICS =================
-HOST='💻  HP Linux Server'
 TS=$(date '+%Y-%m-%d %H:%M:%S')
 UPTIME=$(uptime -p | sed 's/^up //')
 
@@ -33,19 +36,19 @@ health_emoji() {
 
 # ================= CPU USAGE (1 min avg) =================
 CPU_ACTIVE=$(mpstat 1 60 | awk '/Average/ {printf "%.2f",100-$NF}')
-
-# extract integer part for emoji logic
 CPU_INT=${CPU_ACTIVE%.*}
 CPU_E=$(cpu_emoji "$CPU_INT")
 
-
 # ================= DISK METRICS =================
 disk_metrics() {
-  DEV="$1"
-  LABEL="$2"
+  local DEV="$1"
+  local LABEL="$2"
 
-  TEMP=$(smartctl -A "$DEV" | awk '$1==194 {print $10+0}')
-  REALLOC=$(smartctl -A "$DEV" | awk '/Reallocated_Sector_Ct/ {print $NF+0}')
+  TEMP=$(smartctl -A "$DEV" 2>/dev/null | awk '$1==194 {print $10+0}')
+  REALLOC=$(smartctl -A "$DEV" 2>/dev/null | awk '/Reallocated_Sector_Ct/ {print $NF+0}')
+
+  [ -n "$TEMP" ] || TEMP="N/A"
+  [ -n "$REALLOC" ] || REALLOC="0"
 
   TEMP_E=$(temp_emoji "$TEMP")
   REALLOC_E=$(health_emoji "$REALLOC")
@@ -53,23 +56,19 @@ disk_metrics() {
   printf "    💽 *%s*\n        • 🌡️ Temp: %s°C %s\n        • ♻️ Reallocated: %s %s\n" \
     "$LABEL" "$TEMP" "$TEMP_E" "$REALLOC" "$REALLOC_E"
 }
+
+# ================= BUILD DISK BLOCK (LIB-DRIVEN) =================
 DISK_BLOCK=""
 
-[ -b /dev/sda ] && DISK_BLOCK+="$(disk_metrics /dev/sda "SSD")"$'\n'
-[ -b /dev/sdb ] && DISK_BLOCK+="$(disk_metrics /dev/sdb "Internal HDD")"$'\n'
-[ -b /dev/sdc ] && DISK_BLOCK+="$(disk_metrics /dev/sdc "External HDD")"$'\n'
+for DEV in $(get_sata_devices); do
+  NAME=$(disk_friendly_name "$DEV")
+  [ -n "$NAME" ] || continue
 
-# ================= LOG (FULL DETAILS) =================
-LOG_MSG="$HOST
-CPU Usage: $CPU_ACTIVE%
-$DISK_BLOCK
-$TS
---------------------------------------------------"
+  DISK_BLOCK+="$(disk_metrics "$DEV" "$NAME")"$'\n'
+done
 
-echo "$LOG_MSG" >> "$LOG_FILE"
-
-# ================= TELEGRAM =================
-TG_MSG="*$HOST*
+# ================= FINAL MESSAGE =================
+MSG="*$HOST*
 
 ⏱️ *Uptime*
     $UPTIME
@@ -81,8 +80,12 @@ TG_MSG="*$HOST*
 $DISK_BLOCK
 🕒 *$TS*"
 
-curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
+# ================= LOG =================
+echo "$(echo "$MSG" | sed 's/\*//g')" >> "$LOG_FILE"
+
+# ================= TELEGRAM =================
+curl -s -X POST "https://api.telegram.org/bot$TG_HOURLY_BOT_TOKEN/sendMessage" \
   -d chat_id="$TG_CHAT_ID" \
-  -d text="$TG_MSG" \
+  -d text="$MSG" \
   -d parse_mode=Markdown \
   -d disable_web_page_preview=true >/dev/null

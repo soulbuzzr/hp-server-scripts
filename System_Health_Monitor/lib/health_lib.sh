@@ -55,3 +55,44 @@ internet_up() {
   ping -c1 -W1 8.8.8.8 >/dev/null 2>&1
 }
 
+# ================= DISK DISCOVERY =================
+get_sata_devices() {
+  smartctl --scan 2>/dev/null | awk '{print $1}'
+}
+
+# ================= DISK MODEL NAME =================
+disk_model_name() {
+  local dev="$1"
+
+  smartctl -i "$dev" 2>/dev/null \
+    | awk -F: '
+        /Device Model/ {
+          gsub(/^[ \t]+/, "", $2);
+          print $2;
+          exit
+        }'
+}
+
+# ================= DISK FRIENDLY NAME =================
+disk_friendly_name() {
+  local dev="$1"
+  local model
+
+  model=$(disk_model_name "$dev")
+
+  case "$model" in
+    *INTEL*SSD*)
+      echo "SSD"
+      ;;
+    *WDC*WD10SPZX*)
+      echo "Internal HDD"
+      ;;
+    *ST500LM000*)
+      echo "External HDD"
+      ;;
+    *)
+      echo "${model:-$dev}"
+      ;;
+  esac
+}
+

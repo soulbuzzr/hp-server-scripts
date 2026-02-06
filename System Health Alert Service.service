@@ -31,8 +31,9 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now \
   system-health-alerts@cpu_load.service \
   system-health-alerts@cpu_temp.service \
-  system-health-alerts@gpu_temp.service \
-  system-health-alerts@dust_cooling.service
+  system-health-alerts@disk_temp.service \
+  system-health-alerts@dust_cooling.service \
+  system-health-alerts@gpu_temp.service 
 
 3️⃣ Verify (clean & beautiful)
 systemctl status system-health-alerts@*
