@@ -1,14 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# ================= CONFIG =================
-# Telegram notification integration (from cron env)
-: "${TG_BOT_TOKEN:?TG_BOT_TOKEN not set}"
-: "${TG_CHAT_ID:?TG_CHAT_ID not set}"
+# ================= LOAD SHARED LIB =================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/../../lib/health_lib.sh"
+
 LOG_FILE="/var/log/system_health.log"
 
 # ================= BASICS =================
-HOST='💻  HP Linux Server'
+HOST="${HOST_NAME:-💻  HP Linux Server}"
 TS=$(date '+%Y-%m-%d %H:%M:%S')
 UPTIME=$(uptime -p | sed 's/^up //')
 

@@ -2,48 +2,19 @@
 set -u
 set -o pipefail
 
-# ================= LOAD ENV =================
-ENV_FILE="/home/hpserver/System_scripts/system_health_bot.env"
-if [ ! -r "$ENV_FILE" ]; then
-  echo "ERROR: Missing env file: $ENV_FILE" >&2
-  exit 1
-fi
-# shellcheck source=/home/hpserver/System_scripts/system_health_bot.env
-source "$ENV_FILE"
-
-: "${TG_BOT_TOKEN:?Missing TG_BOT_TOKEN}"
-: "${TG_CHAT_ID:?Missing TG_CHAT_ID}"
-
-# ================= LOAD CONFIG =================
-CONFIG_FILE="/home/hpserver/System_scripts/system_health_monitor.conf"
-if [ ! -r "$CONFIG_FILE" ]; then
-  echo "ERROR: Missing config file: $CONFIG_FILE" >&2
-  exit 1
-fi
-# shellcheck source=/home/hpserver/System_scripts/system_health_monitor.conf
-source "$CONFIG_FILE"
+# ================= LOAD SHARED LIB =================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/../../lib/health_lib.sh"
 
 # Required thresholds
 : "${TEMP_THRESHOLD:?Missing TEMP_THRESHOLD}"
 : "${SSD_WEAR_VALUE_WARN:?Missing SSD_WEAR_VALUE_WARN}"
 
 # ================= BASICS =================
-HOST="🖥️ HP Linux Server"
-LOG="/var/log/ssd_health_alerts.log"
+HOST="${HOST_NAME:-🖥️ HP Linux Server}"
 
 SSD_DEV="/dev/sda"
-
-log() {
-  echo "$(date '+%F %T') $1" >> "$LOG"
-}
-
-tg_send() {
-  curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
-    -d chat_id="$TG_CHAT_ID" \
-    -d text="$1" \
-    -d parse_mode=Markdown \
-    -d disable_web_page_preview=true >/dev/null
-}
 
 # ================= SMART READERS =================
 
@@ -62,17 +33,12 @@ read_wear_value() {
   smartctl -A "$SSD_DEV" | awk '/Media_Wearout_Indicator/ {print $4+0}'
 }
 
-# ================= CONNECTIVITY CHECK =================
-internet_up() {
-  ping -c 1 -W 1 8.8.8.8 >/dev/null 2>&1
-}
-
 until internet_up; do
-  log "Waiting for internet before startup notify..."
+  log SSD "Waiting for internet before startup notify..."
   sleep 5
 done
 
-log "Internet is up, starting ssd health monitor..."
+log SSD "Internet is up, starting ssd health monitor..."
 sleep 60
 
 # ================= STARTUP NOTIFY =================
@@ -88,7 +54,7 @@ Reallocated Sector VALUE: *${REALLOC_VAL_START}*
 Media Wearout VALUE (life remaining): *${WEAR_VAL_START}%*
 Monitoring interval: 6 hours"
 
-log "SSD health monitoring started"
+log SSD "SSD health monitoring started"
 tg_send "$STARTUP_MSG"
 
 # ================= SSD HEALTH MONITOR =================
@@ -97,7 +63,7 @@ while true; do
   REALLOC_VAL=$(read_realloc_value)
   WEAR_VAL=$(read_wear_value)
 
-  log "SSD_STATUS temp=${TEMP}C realloc_val=${REALLOC_VAL} wear_val=${WEAR_VAL}"
+  log SSD "SSD_STATUS temp=${TEMP}C realloc_val=${REALLOC_VAL} wear_val=${WEAR_VAL}"
 
   # ---- Temperature alert ----
   if [ "$TEMP" -ge "$TEMP_THRESHOLD" ]; then
@@ -107,7 +73,7 @@ Device: SSD
 Temperature: ${TEMP}°C
 Threshold: ${TEMP_THRESHOLD}°C"
 
-    log "SSD TEMP ALERT (${TEMP}C)"
+    log SSD "SSD TEMP ALERT (${TEMP}C)"
     tg_send "$ALERT_MSG"
   fi
 
@@ -118,7 +84,7 @@ $HOST
 Device: SSD
 Reallocated Sector VALUE: ${REALLOC_VAL}"
 
-    log "SSD REALLOC ALERT (${REALLOC_VAL})"
+    log SSD "SSD REALLOC ALERT (${REALLOC_VAL})"
     tg_send "$ALERT_MSG"
   fi
 
@@ -130,7 +96,7 @@ Device: SSD
 Life Remaining: ${WEAR_VAL}%
 Warning threshold: ${SSD_WEAR_VALUE_WARN}%"
 
-    log "SSD WEAR ALERT (${WEAR_VAL}%)"
+    log SSD "SSD WEAR ALERT (${WEAR_VAL}%)"
     tg_send "$ALERT_MSG"
   fi
 
