@@ -2,17 +2,14 @@
 set -u
 set -o pipefail
 
-# Shared library for System_Health_Monitor scripts.
-# - Loads env from:   $BASE_DIR/env/system_health_bot.env
-# - Loads config from:$BASE_DIR/conf/system_limits.conf
-# - Provides: log, tg_send, internet_up
+# ================= RESOLVE HOME DIRECTORY for root user =================
+if [[ "$HOME" == "/root" ]]; then
+  HOME="/home/sughosha"
+fi
 
-# ================= BASE DIRECTORY =================
-_health_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="${SYSTEM_HEALTH_BASE_DIR:-$(cd "$_health_lib_dir/.." && pwd)}"
-
-ENV_FILE="${SYSTEM_HEALTH_ENV_FILE:-$BASE_DIR/env/system_health_bot.env}"
-CONF_FILE="${SYSTEM_HEALTH_CONF_FILE:-$BASE_DIR/conf/system_limits.conf}"
+BASE_DIR="$HOME/System_Scripts/System_Health_Monitor"
+ENV_FILE="$BASE_DIR/env/system_health_bot.env"
+CONF_FILE="$BASE_DIR/conf/system_limits.conf"
 
 # ================= LOAD ENV =================
 if [ ! -r "$ENV_FILE" ]; then
@@ -34,22 +31,18 @@ fi
 source "$CONF_FILE"
 
 # ================= LOGGING =================
-LOG_DIR="${SYSTEM_HEALTH_LOG_DIR:-/var/log/system_health}"
-LOG_FILE="${SYSTEM_HEALTH_LOG_FILE:-$LOG_DIR/health.log}"
+LOG_DIR="/var/log/system_health"
+LOG_FILE="$LOG_DIR/health.log"
 
 mkdir -p "$LOG_DIR"
 
 log() {
-  # Usage: log COMPONENT MESSAGE...
-  # Example: log CPU "avg=${CPU_AVG}%"
-  local component="${1:-MAIN}"
-  shift || true
-  echo "$(date '+%F %T') [$component] $*" >> "$LOG_FILE"
+  # Usage: log COMPONENT MESSAGE
+  echo "$(date '+%F %T') [$1] $2" >> "$LOG_FILE"
 }
 
 # ================= TELEGRAM =================
 tg_send() {
-  # Usage: tg_send "message"
   curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
     --data-urlencode "chat_id=$TG_CHAT_ID" \
     --data-urlencode "text=$1" \
@@ -59,6 +52,6 @@ tg_send() {
 
 # ================= CONNECTIVITY =================
 internet_up() {
-  ping -c 1 -W 1 8.8.8.8 >/dev/null 2>&1
+  ping -c1 -W1 8.8.8.8 >/dev/null 2>&1
 }
 

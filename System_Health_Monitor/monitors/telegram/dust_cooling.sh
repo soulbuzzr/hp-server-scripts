@@ -3,11 +3,14 @@ set -u
 set -o pipefail
 
 # ================= LOAD SHARED LIB =================
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=/dev/null
-source "$SCRIPT_DIR/../../lib/health_lib.sh"
+source "$HOME/System_Scripts/System_Health_Monitor/lib/health_lib.sh"
 
-HOSTNAME="${HOST_NAME:-💻  HP Linux Server}"
+# ================= VALIDATION =================
+: "${DUST_CPU_ACTIVE_MAX:?Missing DUST_CPU_ACTIVE_MAX}"
+: "${DUST_CPU_TEMP_MIN:?Missing DUST_CPU_TEMP_MIN}"
+: "${DUST_CPU_TEMP_MAD_MAX:?Missing DUST_CPU_TEMP_MAD_MAX}"
+: "${DUST_DETECT_DURATION:?Missing DUST_DETECT_DURATION}"
+: "${HOST_NAME:?Missing HOST_NAME}"
 
 # ================= FLOAT HELPERS =================
 float_gt() { awk "BEGIN{exit !($1 >  $2)}"; }
@@ -51,7 +54,6 @@ cpu_sample_60s() {
   mpstat 1 60 > /tmp/mpstat.$$ &
   MPSTAT_PID=$!
 
-  # sample temperature once per second (parallel)
   for i in {1..60}; do
     for z in /sys/class/thermal/thermal_zone6/temp; do
       [ -r "$z" ] || continue
@@ -73,24 +75,22 @@ cpu_sample_60s() {
   echo "$CPU_ACTIVE $CPU_TEMP"
 }
 
+# ================= WAIT FOR NETWORK =================
 until internet_up; do
-  log DUST "Waiting for internet before startup notify..."
+  log DUST "Waiting for internet before startup..."
   sleep 5
 done
 
-log DUST "Internet is up, starting dust / cooling monitor..."
-
 # ================= STARTUP =================
 log DUST "Dust / cooling monitor started"
-sleep 60
 tg_send "🧹 *Dust / Cooling Monitor Started*
-Host: $HOSTNAME
+$HOST_NAME
 
 Thresholds:
-• CPU active (median) < ${DUST_CPU_ACTIVE_MAX}%
-• Temp (median) > ${DUST_CPU_TEMP_MIN}°C
-• Temp stability (MAD) ≤ ${DUST_CPU_TEMP_MAD_MAX}°C
-• Window: ${DUST_DETECT_DURATION} minutes"
+• CPU active (median) < *${DUST_CPU_ACTIVE_MAX}%*
+• Temp (median) > *${DUST_CPU_TEMP_MIN}°C*
+• Temp stability (MAD) ≤ *${DUST_CPU_TEMP_MAD_MAX}°C*
+• Window: *${DUST_DETECT_DURATION} minutes*"
 
 # ================= MAIN LOOP =================
 CPU_ACTIVE_BUF=()
@@ -129,8 +129,8 @@ while true; do
   fi
 
   if [ "$DUST_MINUTES" -ge "$DUST_DETECT_DURATION" ]; then
-    MSG="🧹 *POSSIBLE DUST / COOLING ISSUE*
-Host: $HOSTNAME
+    tg_send "🧹 *POSSIBLE DUST / COOLING ISSUE*
+$HOST_NAME
 
 CPU Active (median ${DUST_DETECT_DURATION}m): ${CPU_ACTIVE_MED}%
 CPU Temp (median ${DUST_DETECT_DURATION}m): ${CPU_TEMP_MED}°C
@@ -142,7 +142,6 @@ Duration: ${DUST_DETECT_DURATION} minutes
 - Check airflow"
 
     log DUST "ALERT SENT (dust/cooling suspected)"
-    tg_send "$MSG"
     DUST_MINUTES=0
   fi
 done
