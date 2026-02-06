@@ -4,7 +4,7 @@ set -o pipefail
 
 # ================= RESOLVE HOME DIRECTORY for root user =================
 if [[ "$HOME" == "/root" ]]; then
-  HOME="/home/sughosha"
+  HOME="/home/hpserver"
 fi
 
 BASE_DIR="$HOME/System_Scripts/System_Health_Monitor"

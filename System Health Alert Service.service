@@ -1,0 +1,50 @@
+Services running at /etc/systemd/system/<alert-type>-alerts.service
+
+1️⃣ Create ONE template service
+📄 /etc/systemd/system/system-health-alerts@.service
+[Unit]
+Description=System Health Alert (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+
+# Explicit environment (robust under systemd)
+Environment=HOME=/home/hpserver
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# %i expands to instance name
+ExecStart=/home/hpserver/System_Scripts/System_Health_Monitor/monitors/telegram/%i.sh
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+2️⃣ Enable all monitors using the template
+Enable + start ALL at once
+sudo systemctl daemon-reload
+
+sudo systemctl enable --now \
+  system-health-alerts@cpu_load.service \
+  system-health-alerts@cpu_temp.service \
+  system-health-alerts@gpu_temp.service \
+  system-health-alerts@dust_cooling.service
+
+3️⃣ Verify (clean & beautiful)
+systemctl status system-health-alerts@*
+
+
+Example output:
+
+● system-health-alerts@cpu_temp.service    active (running)
+● system-health-alerts@battery_monitor.service  active (running)
+● system-health-alerts@dust_cooling.service     active (running)
+
+
+Logs per instance:
+
+journalctl -u system-health-alerts@cpu_temp.service
