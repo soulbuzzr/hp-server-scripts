@@ -1,11 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
+# ================= RESOLVE HOME DIRECTORY for root user =================
+if [[ "$HOME" == "/root" ]]; then
+  HOME="/home/hpserver"
+fi
+
 # ================= LOAD SHARED LIB =================
 source "$HOME/System_Scripts/System_Health_Monitor/lib/health_lib.sh"
 
 # ================= VALIDATION =================
-: "${TG_BOT_TOKEN:?TG_BOT_TOKEN not set}"
+: "${TG_HOURLY_BOT_TOKEN:?TG_HOURLY_BOT_TOKEN not set}"
 : "${TG_CHAT_ID:?TG_CHAT_ID not set}"
 : "${HOST_NAME:?Missing HOST_NAME}"
 
@@ -68,7 +73,7 @@ for DEV in $(get_sata_devices); do
 done
 
 # ================= FINAL MESSAGE =================
-MSG="*$HOST*
+MSG="*$HOST_NAME*
 
 ⏱️ *Uptime*
     $UPTIME
