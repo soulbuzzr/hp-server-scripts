@@ -10,15 +10,16 @@ fi
 source "$HOME/System_Scripts/System_Health_Monitor/lib/health_lib.sh"
 
 # ================= VALIDATION =================
-: "${TG_HOURLY_BOT_TOKEN:?TG_HOURLY_BOT_TOKEN not set}"
-: "${TG_CHAT_ID:?TG_CHAT_ID not set}"
+: "${TG_HOURLY_BOT_TOKEN:?Missing TG_HOURLY_BOT_TOKEN}"
+: "${TG_CHAT_ID:?Missing TG_CHAT_ID}"
 : "${HOST_NAME:?Missing HOST_NAME}"
 
-LOG_FILE="/var/log/system_health.log"
+# ================= WAIT FOR NETWORK =================
+wait_for_network HOURLY
 
 # ================= BASICS =================
-TS=$(date '+%Y-%m-%d %H:%M:%S')
-UPTIME=$(uptime -p | sed 's/^up //')
+TS="$(date '+%Y-%m-%d %H:%M:%S')"
+UPTIME="$(uptime -p | sed 's/^up //')"
 
 # ================= EMOJI HELPERS =================
 cpu_emoji() {
@@ -39,58 +40,74 @@ health_emoji() {
   else echo "🔴"; fi
 }
 
-# ================= CPU USAGE (1 min avg) =================
+# ================= CPU METRICS =================
 CPU_ACTIVE=$(mpstat 1 60 | awk '/Average/ {printf "%.2f",100-$NF}')
 CPU_INT=${CPU_ACTIVE%.*}
 CPU_E=$(cpu_emoji "$CPU_INT")
 
-# ================= DISK METRICS =================
-disk_metrics() {
-  local DEV="$1"
-  local LABEL="$2"
+CPU_BLOCK="🧮 *CPU*
+    • Active CPU Usage (1 min avg): *$CPU_ACTIVE%* $CPU_E
 
-  TEMP=$(smartctl -A "$DEV" 2>/dev/null | awk '$1==194 {print $10+0}')
-  REALLOC=$(smartctl -A "$DEV" 2>/dev/null | awk '/Reallocated_Sector_Ct/ {print $NF+0}')
+"
 
-  [ -n "$TEMP" ] || TEMP="N/A"
-  [ -n "$REALLOC" ] || REALLOC="0"
+# ================= DISK BLOCK (SATA) =================
+DISK_BLOCK="🗄 *Disk Health*
+"
+
+for DEV in $(get_sata_devices); do
+  NAME="$(disk_friendly_name "$DEV")"
+  [[ -n "$NAME" ]] || continue
+
+  TEMP="$(smartctl -A "$DEV" 2>/dev/null | awk '$1==194 {print $10+0}')"
+  REALLOC="$(read_realloc "$DEV")"
+
+  [[ -n "$TEMP" ]] || TEMP=0
+  [[ -n "$REALLOC" ]] || REALLOC=0
 
   TEMP_E=$(temp_emoji "$TEMP")
   REALLOC_E=$(health_emoji "$REALLOC")
 
-  printf "    💽 *%s*\n        • 🌡️ Temp: %s°C %s\n        • ♻️ Reallocated: %s %s\n" \
-    "$LABEL" "$TEMP" "$TEMP_E" "$REALLOC" "$REALLOC_E"
-}
+  DISK_BLOCK+="📀 *$NAME*
+    • 🌡️ Temp: *$TEMP°C* *$TEMP_E*
+    • ♻️ Reallocated blocks: *$REALLOC*
 
-# ================= BUILD DISK BLOCK (LIB-DRIVEN) =================
-DISK_BLOCK=""
-
-for DEV in $(get_sata_devices); do
-  NAME=$(disk_friendly_name "$DEV")
-  [ -n "$NAME" ] || continue
-
-  DISK_BLOCK+="$(disk_metrics "$DEV" "$NAME")"$'\n'
+"
 done
 
+# ================= GPU BLOCK (RADEON, OPTIONAL) =================
+GPU_TEMP="$(read_gpu_temp || true)"
+if [[ "$GPU_TEMP" =~ ^[0-9]+$ ]]; then
+  GPU_E=$(temp_emoji "$GPU_TEMP")
+  GPU_BLOCK="🎮 *GPU*
+• Radeon Temp: *${GPU_TEMP}°C* ${GPU_E}
+
+"
+fi
+
+# ================= MEMORY BLOCK =================
+read RAM_USED RAM_PCT RAM_AVAIL RAM_TOTAL <<< \
+$(free -h | awk '/Mem:/ {printf "%s %.0f %s %s",$3,$3/$2*100,$7,$2}')
+
+SWAP_AVAIL="$(free -h | awk '/Swap:/ {print $4}')"
+
+MEM_BLOCK="🧠 *Memory*
+• Used: *${RAM_USED}* (${RAM_PCT}%)
+• Available: ${RAM_AVAIL}
+• Total: ${RAM_TOTAL}
+
+💾 *Swap*
+• Available: ${SWAP_AVAIL}"
+
 # ================= FINAL MESSAGE =================
-MSG="*$HOST_NAME*
+MSG="*${HOST_NAME}*
 
-⏱️ *Uptime*
-    $UPTIME
+⏱ *Uptime*
+${UPTIME}
 
-🧮 *CPU*
-    • Active CPU Usage (1 min avg): $CPU_ACTIVE% $CPU_E
+${CPU_BLOCK}${DISK_BLOCK}${GPU_BLOCK}${MEM_BLOCK}
 
-🗄️ *Disk Health*
-$DISK_BLOCK
-🕒 *$TS*"
+🕒 *${TS}*"
 
-# ================= LOG =================
-echo "$(echo "$MSG" | sed 's/\*//g')" >> "$LOG_FILE"
-
-# ================= TELEGRAM =================
-curl -s -X POST "https://api.telegram.org/bot$TG_HOURLY_BOT_TOKEN/sendMessage" \
-  -d chat_id="$TG_CHAT_ID" \
-  -d text="$MSG" \
-  -d parse_mode=Markdown \
-  -d disable_web_page_preview=true >/dev/null
+# ================= SEND =================
+log HOURLY "sending hourly system health report"
+tg_send_hourly "$MSG"

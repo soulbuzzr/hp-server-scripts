@@ -6,51 +6,39 @@ set -o pipefail
 source "$HOME/System_Scripts/System_Health_Monitor/lib/health_lib.sh"
 
 # ================= VALIDATION =================
-: "${DISK_TEMP_WARN:?Missing DISK_TEMP_WARN}"
+: "${SSD_TEMP_WARN:?Missing SSD_TEMP_WARN}"   # °C
 : "${HOST_NAME:?Missing HOST_NAME}"
 
 command -v smartctl >/dev/null 2>&1 || exit 0
 
 # ================= WAIT FOR NETWORK =================
-until internet_up; do
-  log DISK_TEMP "Waiting for internet..."
-  sleep 5
-done
+wait_for_network SSD_TEMP
 
-# ================= STARTUP NOTIFY =================
-log DISK_TEMP "SATA DISK temperature monitor started"
-tg_send "💾 *DISK Temperature Monitor Active*
+# ================= STARTUP =================
+startup_notify DISK_TEMP "💾 *SATA DISK Temperature Monitor Active*
 $HOST_NAME
-Threshold: *${DISK_TEMP_WARN}°C*"
 
-# ================= TEMP READER =================
-read_sata_temp() {
-  local dev="$1"
-  smartctl -A "$dev" 2>/dev/null | awk '$1==194 {print $10+0}'
-}
+Threshold:
+• SSD temperature > *${SSD_TEMP_WARN}°C*
+Interval: *${DISK_CHECK_INTERVAL} minute*"
+
+# ================= INTERVAL =================
+CHECK_INTERVAL_SEC=60
 
 # ================= MAIN LOOP =================
 while true; do
   for DEV in $(get_sata_devices); do
     NAME=$(disk_friendly_name "$DEV")
+    TEMP=$(disk_temperature "$DEV" || true)
 
-    # Only alert for INTERNAL disks (SSD + WD HDD)
-    case "$NAME" in
-      "SSD"|"Internal HDD")
-        TEMP=$(read_sata_temp "$DEV")
-        ;;
-      *)
-        continue
-        ;;
-    esac
-
-    [ -n "$TEMP" ] || continue
+    [[ -n "$TEMP" ]] || continue
 
     log DISK_TEMP "[$NAME] temp=${TEMP}C"
 
     if (( TEMP > DISK_TEMP_WARN )); then
-      tg_send "⚠️ *DISK TEMP HIGH*
+      tg_send "⚠️ *DISK TEMPERATURE HIGH*
 $HOST_NAME
+
 Drive: *$NAME*
 Temperature: *${TEMP}°C*
 Threshold: *${DISK_TEMP_WARN}°C*"

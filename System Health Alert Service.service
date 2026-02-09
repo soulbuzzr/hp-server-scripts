@@ -33,7 +33,9 @@ sudo systemctl enable --now \
   system-health-alerts@cpu_temp.service \
   system-health-alerts@disk_temp.service \
   system-health-alerts@dust_cooling.service \
-  system-health-alerts@gpu_temp.service 
+  system-health-alerts@internal_hdd_health.service \
+  system-health-alerts@gpu_temp.service \
+  system-health-alerts@sata_ssd_health.service
 
 3️⃣ Verify (clean & beautiful)
 systemctl status system-health-alerts@*
