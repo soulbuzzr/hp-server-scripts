@@ -156,6 +156,13 @@ disk_friendly_name() {
   esac
 }
 
+# ================= DISK TEMPERATURE =================
+disk_temperature() {
+  local dev="$1"
+  smartctl -A "$dev" 2>/dev/null \
+    | awk '$1 == 194 { print $10; exit }'
+}
+
 # ================= DISK HEALTH =================
 read_realloc() {
   local dev="$1"
