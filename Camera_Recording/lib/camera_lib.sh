@@ -93,11 +93,45 @@ wait_for_network() {
 
 # ================= CAMERA DISCOVERY =================
 get_ip_from_mac() {
-  local mac
-  mac=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+  local target_mac ip attempt
 
-  arp-scan "$SUBNET" 2>/dev/null \
-    | awk -v m="$mac" 'tolower($2)==m {print $1; exit}'
+  target_mac=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+
+  # ---- Try arp-scan 5 times ----
+  for attempt in {1..5}; do
+    ip=$(arp-scan "$SUBNET" 2>/dev/null \
+        | awk -v m="$target_mac" 'tolower($2)==m {print $1; exit}')
+
+    if [ -n "$ip" ]; then
+      log "DISCOVERY" "Found $target_mac via arp-scan ($ip)"
+      echo "$ip"
+      return 0
+    fi
+
+    sleep 1
+  done
+
+  log "DISCOVERY" "ARP failed for $target_mac, trying nmap"
+
+  # ---- Fallback: nmap scan ----
+  nmap -sn "$SUBNET" >/dev/null 2>&1
+
+  ip=$(arp -an 2>/dev/null \
+      | awk -v m="$target_mac" '
+        tolower($4)==m {
+          gsub(/[()]/,"",$2);
+          print $2;
+          exit
+        }')
+
+  if [ -n "$ip" ]; then
+    log "DISCOVERY" "Found $target_mac via nmap ($ip)"
+    echo "$ip"
+    return 0
+  fi
+
+  log "DISCOVERY" "Failed to find $target_mac"
+  return 1
 }
 
 build_rtsp_url() {
@@ -113,20 +147,15 @@ build_rtsp_url() {
       ;;
   esac
 
-  ip=$(get_ip_from_mac "$mac")
-
-  if [ -z "$ip" ]; then
-    log "LIB" "Camera $cam not found"
-    return 1
-  fi
+  ip=$(get_ip_from_mac "$mac") || return 1
 
   echo "rtsp://${ip}:${RTSP_PORT}${CAMERA_RTSP_PATH}"
 }
 
 file_extension() {
   case "$1" in
-    main) echo "$MAIN_CAMERA_CONTAINER" ;;
-    mini) echo "$MINI_CAMERA_CONTAINER" ;;
+    main) echo "$MAIN_CAMERA_FILE_EXTENSION" ;;
+    mini) echo "$MINI_CAMERA_FILE_EXTENSION" ;;
     *) return 1 ;;
   esac
 }
@@ -143,6 +172,7 @@ is_segment_boundary() {
 # ================= CAMERA RECORD (COMMON) =================
 cam_record_common() {
   local camera="$1"
+  shift
 
   local rtsp_url ext file
 
@@ -157,16 +187,16 @@ cam_record_common() {
 
   ffmpeg -nostdin -loglevel error \
     -rtsp_transport tcp \
-    "$@" \
     -fflags +genpts -use_wallclock_as_timestamps 1 \
     -i "$rtsp_url" \
     -t "$SEGMENT_DURATION" \
+    "$@" \
     "$file"
 }
 
 # ================= MAIN CAMERA RECORD =================
 cam_main_record() {
-  cam_record_common main \ 
+  cam_record_common main \
     -c copy
 }
 
