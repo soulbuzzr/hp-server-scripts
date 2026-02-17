@@ -3,3 +3,4 @@ session.session*
 tg_forward.py
 tg-venv/
 System_Health_Monitor/env/
+Camera_Recording/env/camera_bot.env
