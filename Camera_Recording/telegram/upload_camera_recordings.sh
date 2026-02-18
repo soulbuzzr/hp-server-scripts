@@ -85,11 +85,10 @@ merge_completed_hour() {
 log "UPLOAD" "Uploader daemon started"
 
 while true; do
-  upload_new_files main
-  upload_new_files mini
+  upload_new_files main &
+  upload_new_files mini &
 
-#   merge_completed_hour main
-#   merge_completed_hour mini
+  wait   
 
   sleep "$POLL_INTERVAL"
 done
