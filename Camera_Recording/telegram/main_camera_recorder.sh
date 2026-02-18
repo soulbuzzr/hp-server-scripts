@@ -14,17 +14,10 @@ source "$HOME/System_Scripts/Camera_Recording/lib/camera_lib.sh"
 wait_for_network "MAIN-REC"
 
 # ================= STARTUP =================
-log "MAIN-REC" "Main camera recorder started"
-cam_status_send "📹 Main camera recorder started"
+log "MAIN_CAMERA" "Clock aligned. Starting recording."
+cam_status_send "🎥 Main camera recording started at $(date '+%F %T')"
 
 # ================= START RECORDING =================
-
-
-# Wait until clock aligned hourly
-while ! is_hour_boundary; do
-  sleep 1
-done
-
 cam_record_common main
 
 

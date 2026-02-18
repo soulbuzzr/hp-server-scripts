@@ -156,27 +156,6 @@ file_extension() {
   esac
 }
 
-# ================= TIME ALIGNMENT =================
-last_hour_trigger=""
-
-is_hour_boundary() {
-  local hour min sec
-  hour=$(date +%H)
-  min=$(date +%M)
-  sec=$(date +%S)
-
-  if [ "$min" -eq 59 ] &&
-     [ "$sec" -ge 55 ] &&
-     [ "$sec" -le 57 ] &&
-     [ "$hour" != "$last_hour_trigger" ]; then
-
-    last_hour_trigger="$hour"
-    return 0
-  fi
-
-  return 1
-} 
-
 # ================= CAMERA RECORD (COMMON) =================
 cam_record_common() {
   local camera="$1"
@@ -191,23 +170,65 @@ cam_record_common() {
 
   log "REC-$camera" "Starting continuous segmented recording"
 
+  # ----- Codec selection -----
   if [ "$camera" = "main" ]; then
-    codec_opts="-c copy"
+    codec_opts=(-c copy)
   else
-    codec_opts="-c:v copy -c:a aac -b:a 64k"
+    codec_opts=(-c:v copy -c:a aac -b:a 64k)
   fi
 
+  # ----- MP4 specific flags -----
+  if [ "$ext" = "mp4" ]; then
+    movflags_opts=(-movflags +faststart)
+  else
+    movflags_opts=()
+  fi
+
+  # ----- Start FFmpeg -----
   ffmpeg -nostdin -loglevel error \
     -rtsp_transport tcp \
     -fflags +genpts \
     -use_wallclock_as_timestamps 1 \
     -i "$rtsp_url" \
-    $codec_opts \
+    "${codec_opts[@]}" \
     -f segment \
     -segment_time "$SEGMENT_DURATION" \
     -segment_atclocktime 1 \
     -reset_timestamps 1 \
     -strftime 1 \
-    "$OUTPUT_DIR/$camera/${camera}_%Y-%m-%d_%H-%M-%S.${ext}"
+    "${movflags_opts[@]}" \
+    "$OUTPUT_DIR/$camera/%Y-%m/%d/%H/${camera}_%Y-%m-%d_%H-%M-%S.${ext}"
 
+  if [ $? -ne 0 ]; then
+    log "REC-$camera" "FFmpeg stopped unexpectedly"
+    cam_status_send "❌ $camera camera recorder stopped"
+    return 1
+  fi
+
+}
+
+# ================= CAPTION HELPER =================
+format_caption() {
+  local file="$1"
+
+  # Extract datetime from filename
+  dt=$(basename "$file" | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}_[0-9-]\{8\}')
+  dt="${dt//_/ }"
+  dt="${dt//-/ }"
+
+  read -r Y M D H Min S <<< "$dt"
+
+  day_suffix() {
+    case "$1" in
+      1|21|31) echo "st" ;;
+      2|22) echo "nd" ;;
+      3|23) echo "rd" ;;
+      *) echo "th" ;;
+    esac
+  }
+
+  suffix=$(day_suffix "$D")
+  month=$(date -d "$Y-$M-$D" +"%b")
+
+  echo "${D}${suffix} ${month} ${Y} ${H}:${Min}"
 }
