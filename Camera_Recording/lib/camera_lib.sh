@@ -53,7 +53,7 @@ cam_tg_api() {
   curl -s -X POST "${TG_API_BASE}${token}/${method}" "$@" >/dev/null
 }
 
-# ================= TELEGRAM MESSAGE (STATUS ONLY) =================
+# ================= TELEGRAM STATUS =================
 cam_status_send() {
   cam_tg_api "$TG_CAMERA_STATUS_BOT_TOKEN" sendMessage \
     --data-urlencode "chat_id=$TG_CHAT_ID" \
@@ -67,12 +67,11 @@ cam_tg_send_file_common() {
   local token="$1"
   local file="$2"
   local caption="$3"
-  [ -n "$token" ] || return 1
 
-  curl -s -X POST "${TG_API_BASE}${token}/sendDocument" \
+  cam_tg_api "$token" sendDocument \
     -F "chat_id=$TG_CHAT_ID" \
     -F "caption=$caption" \
-    -F document=@"$file" >/dev/null
+    -F document=@"$file"
 }
 
 cam_main_send_file() { cam_tg_send_file_common "$TG_MAIN_CAMERA_TOKEN" "$1" "$2"; }
@@ -97,7 +96,7 @@ get_ip_from_mac() {
 
   target_mac=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
-  # ---- Try arp-scan 5 times ----
+  # ----- Try arp-scan 5 times -----
   for attempt in {1..5}; do
     ip=$(arp-scan "$SUBNET" 2>/dev/null \
         | awk -v m="$target_mac" 'tolower($2)==m {print $1; exit}')
@@ -107,7 +106,6 @@ get_ip_from_mac() {
       echo "$ip"
       return 0
     fi
-
     sleep 1
   done
 
@@ -141,10 +139,7 @@ build_rtsp_url() {
   case "$cam" in
     main) mac="$MAIN_CAMERA_MAC" ;;
     mini) mac="$MINI_CAMERA_MAC" ;;
-    *)
-      log "LIB" "Unknown camera type: $cam"
-      return 1
-      ;;
+    *) log "LIB" "Unknown camera type: $cam"; return 1 ;;
   esac
 
   ip=$(get_ip_from_mac "$mac") || return 1
@@ -152,6 +147,7 @@ build_rtsp_url() {
   echo "rtsp://${ip}:${RTSP_PORT}${CAMERA_RTSP_PATH}"
 }
 
+# ================= FILE EXTENSION =================
 file_extension() {
   case "$1" in
     main) echo "$MAIN_CAMERA_FILE_EXTENSION" ;;
@@ -161,47 +157,57 @@ file_extension() {
 }
 
 # ================= TIME ALIGNMENT =================
-is_segment_boundary() {
-  local min sec
+last_hour_trigger=""
+
+is_hour_boundary() {
+  local hour min sec
+  hour=$(date +%H)
   min=$(date +%M)
   sec=$(date +%S)
 
-  [ "$sec" -eq 0 ] && [ $((10#$min % 5)) -eq 0 ]
-}
+  if [ "$min" -eq 59 ] &&
+     [ "$sec" -ge 55 ] &&
+     [ "$sec" -le 57 ] &&
+     [ "$hour" != "$last_hour_trigger" ]; then
+
+    last_hour_trigger="$hour"
+    return 0
+  fi
+
+  return 1
+} 
 
 # ================= CAMERA RECORD (COMMON) =================
 cam_record_common() {
   local camera="$1"
-  shift
 
-  local rtsp_url ext file
+  rtsp_url=$(build_rtsp_url "$camera") || {
+    cam_status_send "⚠️ $camera camera not reachable"
+    return 1
+  }
 
-  rtsp_url=$(build_rtsp_url "$camera") || return 1
   ext=$(file_extension "$camera") || return 1
-
   mkdir -p "$OUTPUT_DIR/$camera"
 
-  file="$OUTPUT_DIR/$camera/${camera}_$(date +%Y-%m-%d_%H-%M-%S).$ext"
+  log "REC-$camera" "Starting continuous segmented recording"
 
-  log "REC-$camera" "Recording $file"
+  if [ "$camera" = "main" ]; then
+    codec_opts="-c copy"
+  else
+    codec_opts="-c:v copy -c:a aac -b:a 64k"
+  fi
 
   ffmpeg -nostdin -loglevel error \
     -rtsp_transport tcp \
-    -fflags +genpts -use_wallclock_as_timestamps 1 \
+    -fflags +genpts \
+    -use_wallclock_as_timestamps 1 \
     -i "$rtsp_url" \
-    -t "$SEGMENT_DURATION" \
-    "$@" \
-    "$file"
-}
+    $codec_opts \
+    -f segment \
+    -segment_time "$SEGMENT_DURATION" \
+    -segment_atclocktime 1 \
+    -reset_timestamps 1 \
+    -strftime 1 \
+    "$OUTPUT_DIR/$camera/${camera}_%Y-%m-%d_%H-%M-%S.${ext}"
 
-# ================= MAIN CAMERA RECORD =================
-cam_main_record() {
-  cam_record_common main \
-    -c copy
-}
-
-# ================= MINI CAMERA RECORD =================
-cam_mini_record() {
-  cam_record_common mini \
-    -c:v copy -c:a aac -b:a 64k
 }
