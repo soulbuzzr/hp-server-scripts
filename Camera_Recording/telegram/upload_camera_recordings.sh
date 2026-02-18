@@ -11,21 +11,38 @@ source "$HOME/System_Scripts/Camera_Recording/lib/camera_lib.sh"
 
 upload_new_files() {
   local camera="$1"
+  local ext
+  ext=$(file_extension "$camera")
 
-  find "$OUTPUT_DIR/$camera" -type f -name "*.$(file_extension "$camera")" | while read -r file; do
+  while IFS= read -r file; do
     marker="${file}.uploaded"
 
-    if [ -f "$marker" ]; then
-      continue
-    fi
+    # Skip if already uploaded
+    [ -f "$marker" ] && continue
+
+    # Skip if file is too new (< 600 sec old)
+    age=$(( $(date +%s) - $(stat -c %Y "$file") ))
+    [ "$age" -lt 600 ] && continue
 
     caption=$(format_caption "$file")
 
     log "UPLOAD-$camera" "Uploading $file"
-    cam_main_send_file "$file" "$caption"
 
-    touch "$marker"
-  done
+    if [ "$camera" = "main" ]; then
+      cam_main_send_file "$file" "$caption"
+    else
+      cam_mini_send_file "$file" "$caption"
+    fi
+
+    if [ $? -eq 0 ]; then
+      touch "$marker"
+      log "UPLOAD-$camera" "Uploaded successfully"
+      sleep 60
+    else
+      log "UPLOAD-$camera" "Failed upload $file"
+    fi
+
+  done < <(find "$OUTPUT_DIR/$camera" -type f -name "*.${ext}" | sort)
 }
 
 merge_completed_hour() {
