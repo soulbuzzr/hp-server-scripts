@@ -18,6 +18,8 @@ log "MAIN_CAMERA" "Clock aligned. Starting recording."
 cam_status_send "🎥 Main camera recording started at $(date '+%F %T')"
 
 # ================= START RECORDING =================
-cam_record_common main
-
-
+while true; do
+  cam_record_common main
+  cam_status_send "⚠️ Main camera restarting recording"
+  sleep 5
+done

@@ -1,0 +1,17 @@
+Service running at /etc/systemd/system/start-ramdisk.service
+[Unit]
+Description=Mount tmpfs Ramdisk at /home/hpserver/Ramdisk
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStart=/bin/mount -t tmpfs -o rw,nosuid,nodev,noatime,size=12G tmpfs /home/hpserver/Ramdisk
+ExecStartPost=/bin/chown hpserver:hpserver /home/hpserver/Ramdisk
+ExecStartPost=/bin/chmod 0777 /home/hpserver/Ramdisk
+
+ExecStop=/bin/umount /home/hpserver/Ramdisk
+
+[Install]
+WantedBy=multi-user.target

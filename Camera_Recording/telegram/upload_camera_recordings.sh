@@ -20,9 +20,9 @@ upload_new_files() {
     # Skip if already uploaded
     [ -f "$marker" ] && continue
 
-    # Skip if file is too new (< 600 sec old)
+    # Skip if file is too new (< Twice the segment duration old [in seconds])
     age=$(( $(date +%s) - $(stat -c %Y "$file") ))
-    [ "$age" -lt 600 ] && continue
+    [ "$age" -lt $((2 * SEGMENT_DURATION)) ] && continue
 
     caption=$(format_caption "$file")
 
@@ -43,43 +43,6 @@ upload_new_files() {
     fi
 
   done < <(find "$OUTPUT_DIR/$camera" -type f -name "*.${ext}" | sort)
-}
-
-merge_completed_hour() {
-  local camera="$1"
-
-  current_hour=$(date +"%Y-%m/%d/%H")
-
-  find "$OUTPUT_DIR/$camera" -mindepth 3 -maxdepth 3 -type d | while read -r hourdir; do
-    rel="${hourdir#$OUTPUT_DIR/$camera/}"
-
-    if [ "$rel" = "$current_hour" ]; then
-      continue
-    fi
-
-    # If already archived, skip
-    if [ -f "$hourdir/.merged" ]; then
-      continue
-    fi
-
-    log "MERGE-$camera" "Merging $hourdir"
-
-    tmp_list="$hourdir/files.txt"
-    ls "$hourdir"/*.$(file_extension "$camera") > "$tmp_list"
-
-    merged_file="$ARCHIVE_DIR/${camera}_$(echo "$rel" | tr '/' '_').$(file_extension "$camera")"
-    mkdir -p "$ARCHIVE_DIR"
-
-    ffmpeg -f concat -safe 0 -i <(sed "s/^/file '/; s/$/'/" "$tmp_list") \
-      -c copy "$merged_file"
-
-    if [ $? -eq 0 ]; then
-      touch "$hourdir/.merged"
-      rm -f "$hourdir"/*.$(file_extension "$camera")
-      rm -f "$hourdir"/*.uploaded
-      log "MERGE-$camera" "Archived $merged_file"
-    fi
-  done
 }
 
 log "UPLOAD" "Uploader daemon started"

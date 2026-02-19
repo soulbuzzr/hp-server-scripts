@@ -187,6 +187,7 @@ cam_record_common() {
   # ----- Start FFmpeg -----
   ffmpeg -nostdin -loglevel error \
     -rtsp_transport tcp \
+    -timeout 5000000 \
     -fflags +genpts \
     -use_wallclock_as_timestamps 1 \
     -i "$rtsp_url" \

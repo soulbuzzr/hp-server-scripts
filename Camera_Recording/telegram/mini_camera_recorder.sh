@@ -18,4 +18,8 @@ log "MINI_CAMERA" "Clock aligned. Starting recording."
 cam_status_send "🎥 Mini camera recording started at $(date '+%F %T')"
 
 # ================= START RECORDING =================
-cam_record_common mini
+while true; do
+  cam_record_common mini
+  cam_status_send "⚠️ Mini camera restarting recording"
+  sleep 5
+done
