@@ -82,15 +82,15 @@ merge_completed_hour() {
     hour_int=$((10#$hour))
 
     # -------- Time Blocks --------
-    if   [ "$hour_int" -le 2 ]; then
+    if   [ "$hour_int" -le 3 ]; then
         block="Midnight"
-    elif [ "$hour_int" -le 5 ]; then
+    elif [ "$hour_int" -le 6 ]; then
         block="Early Morning"
-    elif [ "$hour_int" -le 11 ]; then
+    elif [ "$hour_int" -le 12 ]; then
         block="Morning"
     elif [ "$hour_int" -le 15 ]; then
         block="Noon"
-    elif [ "$hour_int" -le 19 ]; then
+    elif [ "$hour_int" -le 18 ]; then
         block="Evening"
     else
         block="Night"

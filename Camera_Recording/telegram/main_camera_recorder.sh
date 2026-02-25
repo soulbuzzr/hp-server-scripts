@@ -11,10 +11,10 @@ fi
 source "$HOME/System_Scripts/Camera_Recording/lib/camera_lib.sh"
 
 # ================= WAIT FOR NETWORK =================
-wait_for_network "MAIN-REC"
+wait_for_network "MAIN_CAMERA"
 
 # ================= STARTUP =================
-log "MAIN_CAMERA" "Clock aligned. Starting recording."
+log "MAIN_CAMERA" "Starting recording...."
 cam_status_send "🎥 Main camera recording started at $(date '+%F %T')"
 
 # ================= START RECORDING =================

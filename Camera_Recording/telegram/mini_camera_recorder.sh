@@ -11,10 +11,10 @@ fi
 source "$HOME/System_Scripts/Camera_Recording/lib/camera_lib.sh"
 
 # ================= WAIT FOR NETWORK =================
-wait_for_network "MINI-REC"
+wait_for_network "MINI_CAMERA"
 
 # ================= STARTUP =================
-log "MINI_CAMERA" "Clock aligned. Starting recording."
+log "MINI_CAMERA" "Starting recording...."
 cam_status_send "🎥 Mini camera recording started at $(date '+%F %T')"
 
 # ================= START RECORDING =================

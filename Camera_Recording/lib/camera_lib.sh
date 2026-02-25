@@ -33,7 +33,7 @@ source "$ENV_FILE"
 : "${TG_CAMERA_STATUS_BOT_TOKEN:?Missing TG_CAMERA_STATUS_BOT_TOKEN}"
 
 # ================= LOGGING =================
-LOG_DIR="/var/log/camera_recording"
+LOG_DIR="$HOME/Ramdisk/.logs"
 LOG_FILE="$LOG_DIR/camera.log"
 mkdir -p "$LOG_DIR"
 
