@@ -20,7 +20,7 @@ upload_new_files() {
     # Skip if already uploaded
     [ -f "$marker" ] && continue
 
-    # Skip if file is too new (< Twice the segment duration old [in seconds])
+    # Skip if file is too new (< 2 × SEGMENT_DURATION seconds old)
     age=$(( $(date +%s) - $(stat -c %Y "$file") ))
     [ "$age" -lt $((2 * SEGMENT_DURATION)) ] && continue
 
@@ -28,18 +28,21 @@ upload_new_files() {
 
     log "UPLOAD-$camera" "Uploading $file"
 
+    # -------- Send File --------
     if [ "$camera" = "main" ]; then
-      cam_main_send_file "$file" "$caption"
+      response=$(cam_main_send_file "$file" "$caption" || true)
     else
-      cam_mini_send_file "$file" "$caption"
+      response=$(cam_mini_send_file "$file" "$caption" || true)
     fi
 
-    if [ $? -eq 0 ]; then
+    # -------- Validate JSON Safely --------
+    if echo "$response" | jq -e '.ok == true' >/dev/null 2>&1; then
       touch "$marker"
       log "UPLOAD-$camera" "Uploaded successfully"
       sleep 60
     else
-      log "UPLOAD-$camera" "Failed upload $file"
+      log "UPLOAD-$camera" "Upload failed. Response: ${response:-EMPTY}"
+      cam_status_send "Upload $camera camera failed. API Response: ${response:-EMPTY}"
     fi
 
   done < <(find "$OUTPUT_DIR/$camera" -type f -name "*.${ext}" | sort)
@@ -51,7 +54,7 @@ while true; do
   upload_new_files main &
   upload_new_files mini &
 
-  wait   
+  wait
 
   sleep "$POLL_INTERVAL"
 done

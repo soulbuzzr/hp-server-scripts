@@ -20,22 +20,42 @@ while true; do
 
       rel="${hourdir#$BASE_DIR/$cam/}"
 
+      # Skip current hour
       if [ "$rel" = "$current_hour" ]; then
         continue
       fi
 
-      if [ -f "$hourdir/.merged" ]; then
-        log "CLEANUP" "Cleaning $hourdir"
+      # Only consider merged hours
+      if [ ! -f "$hourdir/.merged" ]; then
+        continue
+      fi
+
+      # Ensure all video files are uploaded
+      all_uploaded=true
+
+      shopt -s nullglob
+      for video in "$hourdir"/*.mp4 "$hourdir"/*.mkv; do
+        [ -f "$video" ] || continue
+
+        if [ ! -f "${video}.uploaded" ]; then
+          all_uploaded=false
+          break
+        fi
+      done
+      shopt -u nullglob
+
+      if [ "$all_uploaded" = true ]; then
+        log "CAMERA RECORDING CLEANUP" "Cleaning $hourdir (merged + uploaded)"
 
         rm -f "$hourdir"/*.mp4 2>/dev/null || true
         rm -f "$hourdir"/*.mkv 2>/dev/null || true
         rm -f "$hourdir"/*.uploaded 2>/dev/null || true
 
-        if [ "$(ls -A "$hourdir")" = ".merged" ]; then
-          rm -f "$hourdir/.merged"
-          rmdir "$hourdir" 2>/dev/null || true
-        fi
+        rm -f "$hourdir/.merged"
+
+        rmdir "$hourdir" 2>/dev/null || true
       fi
+
     done
   done
 

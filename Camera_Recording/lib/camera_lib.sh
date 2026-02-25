@@ -50,7 +50,7 @@ cam_tg_api() {
   shift 2
   [ -n "$token" ] || return 1
 
-  curl -s -X POST "${TG_API_BASE}${token}/${method}" "$@" >/dev/null
+  curl -s -X POST "${TG_API_BASE}${token}/${method}" "$@"
 }
 
 # ================= TELEGRAM STATUS =================
@@ -59,7 +59,8 @@ cam_status_send() {
     --data-urlencode "chat_id=$TG_CHAT_ID" \
     --data-urlencode "text=$1" \
     --data-urlencode "parse_mode=Markdown" \
-    --data-urlencode "disable_web_page_preview=true"
+    --data-urlencode "disable_web_page_preview=true" \
+    >/dev/null 2>&1
 }
 
 # ================= TELEGRAM FILE =================
@@ -187,7 +188,7 @@ cam_record_common() {
   # ----- Start FFmpeg -----
   ffmpeg -nostdin -loglevel error \
     -rtsp_transport tcp \
-    -timeout 5000000 \
+    -timeout "$RTSP_TIMEOUT" \
     -fflags +genpts \
     -use_wallclock_as_timestamps 1 \
     -i "$rtsp_url" \
