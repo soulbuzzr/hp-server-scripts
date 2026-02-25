@@ -15,10 +15,21 @@ upload_new_files() {
   ext=$(file_extension "$camera")
 
   while IFS= read -r file; do
-    marker="${file}.uploaded"
+    uploaded_marker="${file}.uploaded"
+    overflow_marker="${file}.file-size-overflow"
 
-    # Skip if already uploaded
-    [ -f "$marker" ] && continue
+    # Skip if already handled
+    [ -f "$uploaded_marker" ] && continue
+    [ -f "$overflow_marker" ] && continue
+
+    # -------- Check file size --------
+    filesize=$(stat -c %s "$file")
+
+    if [ "$filesize" -gt "$MAX_UPLOAD_SIZE" ]; then
+      log "UPLOAD-$camera" "File too large: $file ($filesize bytes)"
+      touch "$overflow_marker"
+      continue
+    fi
 
     # Skip if file is too new (< 2 × SEGMENT_DURATION seconds old)
     age=$(( $(date +%s) - $(stat -c %Y "$file") ))
@@ -37,7 +48,7 @@ upload_new_files() {
 
     # -------- Validate JSON Safely --------
     if echo "$response" | jq -e '.ok == true' >/dev/null 2>&1; then
-      touch "$marker"
+      touch "$uploaded_marker"
       log "UPLOAD-$camera" "Uploaded successfully"
       sleep 60
     else
