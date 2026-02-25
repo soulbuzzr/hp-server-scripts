@@ -60,7 +60,7 @@ cam_status_send() {
     --data-urlencode "text=$1" \
     --data-urlencode "parse_mode=Markdown" \
     --data-urlencode "disable_web_page_preview=true" \
-    >/dev/null 2>&1
+    >/dev/null 2>&1 || true
 }
 
 # ================= TELEGRAM FILE =================
