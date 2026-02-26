@@ -32,8 +32,8 @@ fi
 source "$CONF_FILE"
 
 # ================= LOGGING =================
-LOG_DIR="/var/log/system_health"
-LOG_FILE="$LOG_DIR/health.log"
+LOG_DIR="$HOME/Ramdisk/.logs"
+LOG_FILE="$LOG_DIR/system_health.log"
 
 mkdir -p "$LOG_DIR"
 

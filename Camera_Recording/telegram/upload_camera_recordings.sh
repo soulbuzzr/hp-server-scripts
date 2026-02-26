@@ -47,13 +47,21 @@ upload_new_files() {
     fi
 
     # -------- Validate JSON Safely --------
-    if echo "$response" | jq -e '.ok == true' >/dev/null 2>&1; then
-      touch "$uploaded_marker"
-      log "UPLOAD-$camera" "Uploaded successfully"
-      sleep 60
+    if echo "$response" | jq -e . >/dev/null 2>&1; then
+
+        if echo "$response" | jq -e '.ok' >/dev/null 2>&1; then
+            touch "$uploaded_marker"
+            log "UPLOAD-$camera" "Uploaded successfully"
+            sleep 60
+        else
+            error_msg=$(echo "$response" | jq -r '.description // "Unknown error"')
+            log "UPLOAD-$camera" "Telegram API error: $error_msg"
+            cam_status_send "Upload $camera failed: $error_msg"
+        fi
+
     else
-      log "UPLOAD-$camera" "Upload failed. Response: ${response:-EMPTY}"
-      cam_status_send "Upload $camera camera failed. API Response: ${response:-EMPTY}"
+        log "UPLOAD-$camera" "Invalid JSON / Network failure: ${response}"
+        cam_status_send "Upload $camera failed: Network or curl error"
     fi
 
   done < <(find "$OUTPUT_DIR/$camera" -type f -name "*.${ext}" | sort)
