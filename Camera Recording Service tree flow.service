@@ -157,3 +157,31 @@ RestartSec=60
 
 [Install]
 WantedBy=camera-archive.service
+
+
+ENABLE ALL AT ONCE:
+sudo systemctl daemon-reload && \
+sudo systemctl enable camera.target && \
+sudo systemctl enable camera-tree.service && \
+sudo systemctl enable camera-main-recorder.service && \
+sudo systemctl enable camera-mini-recorder.service && \
+sudo systemctl enable camera-upload.service && \
+sudo systemctl enable camera-archive.service && \
+sudo systemctl enable camera-cleanup.service && \
+sudo systemctl enable camera-retention.service
+
+Reboot to confirm the services at up:
+hpserver@hpelitebook8460p:~$ systemctl list-unit-files | grep camera
+camera-archive.service                                                        enabled         enabled
+camera-cleanup.service                                                        enabled         enabled
+camera-main-recorder.service                                                  enabled         enabled
+camera-mini-recorder.service                                                  enabled         enabled
+camera-retention.service                                                      enabled         enabled
+camera-tree.service                                                           enabled         enabled
+camera-upload.service                                                         enabled         enabled
+camera.target                                                                 enabled         enabled
+hpserver@hpelitebook8460p:~$ systemctl --failed
+  UNIT LOAD ACTIVE SUB DESCRIPTION
+
+0 loaded units listed.
+hpserver@hpelitebook8460p:~$ 
