@@ -1,0 +1,10 @@
+[Unit]
+Description=Set CPU frequency cap
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '/usr/bin/cpupower frequency-set -u 2400MHz'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+Service running at /etc/systemd/system/cpufreq-boost-disable.service
+[Unit]
+Description=Disable CPU Frequency Boost
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
