@@ -1,0 +1,159 @@
+The below shows the flow of camera recording services:
+
+hpserver@hpelitebook8460p:~$ systemctl list-dependencies camera.target --all --no-pager | grep camera
+camera.target
+● ├─camera-tree.service
+● │ ├─camera-main-recorder.service
+● │ ├─camera-mini-recorder.service
+● │ ├─camera-upload.service
+● │ │ ├─camera-archive.service
+● │ │ │ ├─camera-cleanup.service
+● │ │ │ ├─camera-retention.service
+● │ │ ├─camera-main-recorder.service
+● │ │ ├─camera-mini-recorder.service
+
+Services listed by priority:
+
+1. Service running at /etc/systemd/system/camera.target
+[Unit]
+Description=Unified Camera Recording Pipeline
+After=network-online.target
+Wants=network-online.target
+Requires=camera-tree.service
+
+[Install]
+WantedBy=multi-user.target
+
+2. Service running at /etc/systemd/system/camera-tree.service
+[Unit]
+Description=Camera Directory Tree Service
+After=start-ramdisk.service
+Requires=start-ramdisk.service
+PartOf=camera.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/lib/camera_tree_daemon.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=camera.target
+
+3. Both camera-main-recorder.service and camera-mini-recorder.service have same priority
+
+Service running at /etc/systemd/system/camera-main-recorder.service
+[Unit]
+Description=Main Camera Recorder
+After=camera-tree.service
+Requires=camera-tree.service
+BindsTo=camera-tree.service
+PartOf=camera-tree.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/main_camera_recorder.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=camera-tree.service
+
+Service running at /etc/systemd/system/camera-mini-recorder.service 
+[Unit]
+Description=Mini Camera Recorder
+After=camera-tree.service
+Requires=camera-tree.service
+BindsTo=camera-tree.service
+PartOf=camera-tree.service
+
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/mini_camera_recorder.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=camera-tree.service
+
+4. Service running at /etc/systemd/system/camera-upload.service
+[Unit]
+Description=Camera Upload Service
+
+After=camera-main-recorder.service
+After=camera-mini-recorder.service
+
+Requires=camera-main-recorder.service
+Requires=camera-mini-recorder.service
+
+BindsTo=camera-main-recorder.service
+BindsTo=camera-mini-recorder.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/upload_camera_recordings.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=camera-tree.service
+
+5. Service running at /etc/systemd/system/camera-archive.service
+[Unit]
+Description=Camera Archive Service
+After=camera-upload.service
+Requires=camera-upload.service
+BindsTo=camera-upload.service
+PartOf=camera-upload.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/archive_to_hdd.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=camera-upload.service 
+
+6. Both camera-cleanup.service and camera-retention.service have same priority.
+Service running at /etc/systemd/system/camera-cleanup.service 
+[Unit]
+Description=Camera Cleanup Service
+After=camera-archive.service
+Requires=camera-archive.service
+BindsTo=camera-archive.service
+PartOf=camera-archive.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/cleanup_uploaded_recording.sh
+Restart=always
+RestartSec=20
+
+[Install]
+WantedBy=camera-archive.service
+
+Service running at /etc/systemd/system/camera-retention.service 
+[Unit]
+Description=Camera Archive Retention Service
+After=camera-archive.service
+Requires=camera-archive.service
+BindsTo=camera-archive.service
+PartOf=camera-archive.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/archive_retention_cleanup.sh
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=camera-archive.service
