@@ -1,0 +1,22 @@
+Add timelapse feature to camera recording fastforwarding 24x for a single hour video |
+from re-enconding (which is a must for timelapse) 1 hour videos into 24 single videos to be merged to 1 hour day's timelapse video.
+
+
+Currently, this streaming can be done from going to respective directory.
+
+sughosha@work:/net/shared_files/Camera-Recordings-Archive/Main-camera/2026/May/05th$ vlc --rate 24 \
+--fullscreen \
+--play-and-exit \
+--no-video-title-show \
+Midnight/*.mp4 \
+Early\ Morning/*.mp4 \
+Morning/*.mp4 \
+Noon/*.mp4 \
+Evening/*.mp4 \
+Night/*.mp4
+VLC media player 3.0.20 Vetinari (revision 3.0.20-0-g6f0d0ab126b)
+[00006225f4d69550] main libvlc: Running vlc with the default interface. Use 'cvlc' to use vlc without interface.
+libva info: VA-API version 1.20.0
+libva info: Trying to open /usr/lib/x86_64-linux-gnu/dri/radeonsi_drv_video.so
+libva info: Found init function __vaDriverInit_1_20
+libva info: va_openDriver() returns 0
