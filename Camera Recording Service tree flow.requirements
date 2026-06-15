@@ -1,0 +1,13 @@
+Create:
+
+sudo mkdir -p /etc/telegram-upload/credentials
+sudo nano /etc/telegram-upload/credentials/encryption-password
+
+Contents:
+
+ENCRYPTION_PASSWORD=YOUR_STRONG_PASSWORD
+
+Then secure it:
+
+sudo chmod 600 /etc/telegram-upload/credentials/encryption-password
+sudo chown root:root /etc/telegram-upload/credentials/encryption-password
