@@ -11,6 +11,9 @@ BASE_DIR="$HOME/System_Scripts/Camera_Recording"
 CONF_FILE="$BASE_DIR/conf/camera.conf"
 ENV_FILE="$BASE_DIR/env/camera_bot.env"
 
+# ========== LOAD TELEGRAM ENCRYPTION PASSWORD =================
+source /etc/telegram-upload/credentials/encryption-password
+
 # ================= LOAD CONFIG =================
 if [ ! -r "$CONF_FILE" ]; then
   echo "ERROR: Missing config file: $CONF_FILE" >&2
