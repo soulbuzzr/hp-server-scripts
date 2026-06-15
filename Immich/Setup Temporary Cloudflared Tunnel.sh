@@ -1,40 +1,34 @@
 #!/usr/bin/env bash
 
-SESSION="cloudflare"
-LOG="/tmp/cloudflared.log"
-
 while true; do
 
     echo
     echo "Starting Cloudflare tunnel..."
 
-    rm -f "$LOG"
-
-    tmux kill-session -t "$SESSION" 2>/dev/null
-
-    tmux new-session -d -s "$SESSION" \
-        "cloudflared tunnel --url http://localhost:2283 > $LOG 2>&1"
-
-    echo "Waiting for tunnel URL..."
-
     URL=""
 
-    for i in {1..5}; do
+    coproc CF {
+        cloudflared tunnel --url http://localhost:2283 2>&1
+    }
 
-        URL=$(
-            grep -oE 'https://[A-Za-z0-9.-]+\.trycloudflare\.com' "$LOG" |
-            head -n1
-        )
+    while read -r line <&"${CF[0]}"; do
 
-        if [ -n "$URL" ]; then
+        echo "$line"
+
+        if [[ $line =~ https://[A-Za-z0-9.-]+\.trycloudflare\.com ]]; then
+            URL="${BASH_REMATCH[0]}"
             break
         fi
 
-        sleep 1
     done
 
     if [ -z "$URL" ]; then
         echo "Failed to obtain tunnel URL. Restarting..."
+
+        kill "$CF_PID" 2>/dev/null
+        wait "$CF_PID" 2>/dev/null
+
+        sleep 5
         continue
     fi
 
@@ -42,28 +36,38 @@ while true; do
     echo "Tunnel URL found:"
     echo "$URL"
 
-    echo "Checking reachability..."
+    HOSTNAME=${URL#https://}
+
+    echo
+    echo "Waiting for DNS propagation..."
+
+    DNS_OK=0
 
     for i in {1..60}; do
 
-        if curl -fsS \
-            --connect-timeout 5 \
-            --max-time 10 \
-            "$URL" >/dev/null 2>&1; then
-
-            echo
-            echo "Tunnel is reachable."
-            echo "$URL"
-            exit 0
+        if getent hosts "$HOSTNAME" >/dev/null 2>&1; then
+            DNS_OK=1
+            break
         fi
 
         sleep 1
     done
 
-    echo "Tunnel not reachable after 60 seconds. Restarting..."
+    if [ "$DNS_OK" -eq 1 ]; then
 
-    tmux kill-session -t "$SESSION" 2>/dev/null
+        echo
+        echo "Tunnel DNS is live."
+        echo "$URL"
 
-    sleep 2
+        exit 0
+    fi
+
+    echo
+    echo "DNS propagation failed. Restarting..."
+
+    kill "$CF_PID" 2>/dev/null
+    wait "$CF_PID" 2>/dev/null
+
+    sleep 5
 
 done
