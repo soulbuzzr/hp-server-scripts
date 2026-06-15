@@ -1,0 +1,20 @@
+Service running at /etc/systemd/system/light-server-monitor.service
+[Unit]
+Description=Light Server Monitoring Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hpserver
+WorkingDirectory=/home/hpserver/System_Scripts/System_Health_Monitor/monitors/python
+ExecStart=/usr/bin/python3 /home/hpserver/System_Scripts/System_Health_Monitor/monitors/python/live-monitoring.py
+
+Restart=always
+RestartSec=5
+
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+Service running at /etc/systemd/system/cloudflare-tmux.service
+[Unit]
+Description=Cloudflared Quick Tunnel in tmux
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hpserver
+RemainAfterExit=yes
+
+ExecStart=/usr/bin/tmux new-session -d \
+    -s cloudflare \
+    '/usr/local/bin/cloudflared tunnel --url http://localhost:2283'
+
+ExecStop=/usr/bin/tmux kill-session -t cloudflare
+
+[Install]
+WantedBy=multi-user.target
