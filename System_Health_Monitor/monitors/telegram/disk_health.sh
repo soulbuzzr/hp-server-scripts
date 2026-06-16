@@ -6,8 +6,22 @@ set -o pipefail
 source "$HOME/System_Scripts/System_Health_Monitor/lib/health_lib.sh"
 
 # ================= VALIDATION =================
-: "${SSD_WEAR_VALUE_WARN:?Missing SSD_WEAR_VALUE_WARN}"
-: "${REPORTED_UNCORRECT_THRESHOLD_INT:?Missing REPORTED_UNCORRECT_THRESHOLD_INT}"
+: "${BOOT_SSD_REALLOC:?Missing BOOT_SSD_REALLOC}"
+: "${BOOT_SSD_WEAR:?Missing BOOT_SSD_WEAR}"
+
+: "${IMMICH_SSD_REALLOC:?Missing IMMICH_SSD_REALLOC}"
+: "${IMMICH_SSD_WEAR:?Missing IMMICH_SSD_WEAR}"
+
+: "${CAMERA_HDD_REALLOC:?Missing CAMERA_HDD_REALLOC}"
+: "${CAMERA_HDD_PENDING:?Missing CAMERA_HDD_PENDING}"
+: "${CAMERA_HDD_OFFLINE:?Missing CAMERA_HDD_OFFLINE}"
+: "${CAMERA_HDD_REPORTED:?Missing CAMERA_HDD_REPORTED}"
+
+: "${DATA_HDD_REALLOC:?Missing DATA_HDD_REALLOC}"
+: "${DATA_HDD_PENDING:?Missing DATA_HDD_PENDING}"
+: "${DATA_HDD_OFFLINE:?Missing DATA_HDD_OFFLINE}"
+: "${DATA_HDD_REPORTED:?Missing DATA_HDD_REPORTED}"
+
 : "${HOST_NAME:?Missing HOST_NAME}"
 
 # ================= WAIT FOR NETWORK =================
@@ -19,71 +33,88 @@ $HOST_NAME
 
 Monitoring:
 • SSD: reallocated sectors, wear level
-• HDD: reallocated, pending, offline, reported uncorrectable
+• HDD: reallocated, pending, offline, reported uncorrectable sectors
 
 Interval: *6 hours*"
 
 # ================= SATA HEALTH CHECK =================
 check_sata_health() {
-  local dev name
-  local realloc pending offline reported wear
+    local dev name
+    local realloc pending offline reported wear
+    local BASE_REALLOC BASE_PENDING BASE_OFFLINE BASE_REPORTED BASE_WEAR
 
-  for dev in $(get_sata_devices); do
-    name=$(disk_friendly_name "$dev")
+    for dev in $(get_sata_devices); do
+        name=$(disk_friendly_name "$dev")
 
-    # SSDs expose Media_Wearout_Indicator
-    if wear=$(read_wear_value "$dev" 2>/dev/null); then
+        # ================= SSD =================
+        if wear=$(read_wear_value "$dev" 2>/dev/null); then
 
-      realloc=$(read_realloc "$dev")
+            realloc=$(read_realloc "$dev")
 
-      log SATA_HEALTH "[$name] realloc=${realloc} wear=${wear}"
+            read BASE_REALLOC BASE_PENDING BASE_OFFLINE BASE_REPORTED BASE_WEAR \
+                <<< "$(get_disk_Thresholds "$name")"
 
-      if (( realloc > 0 )); then
-        tg_send "🚨 *SSD REALLOCATED SECTORS ALERT*
+            log SATA_HEALTH "[$name] realloc=${realloc} wear=${wear}"
+
+            if (( realloc > BASE_REALLOC )); then
+                tg_send "🚨 *SSD REALLOCATED SECTORS ALERT*
 $HOST_NAME
 
 Drive: *$name*
-Reallocated Sectors: *$realloc*"
-      fi
+Current Reallocated Sectors: *$realloc*
+Threshold: *$BASE_REALLOC*"
+            fi
 
-      if (( wear < SSD_WEAR_VALUE_WARN )); then
-        tg_send "⚠ *SSD WEAR ALERT*
+            if (( wear < BASE_WEAR )); then
+                tg_send "⚠ *SSD WEAR ALERT*
 $HOST_NAME
 
 Drive: *$name*
-Life Remaining: *${wear}%*
-Warning Threshold: *${SSD_WEAR_VALUE_WARN}%*"
-      fi
+Current Life Remaining: *${wear}%*
+Warning Threshold: *${BASE_WEAR}%*"
+            fi
 
-    else
+        # ================= HDD =================
+        else
 
-      realloc=$(read_realloc "$dev")
-      pending=$(read_pending "$dev")
-      offline=$(read_offline "$dev")
-      reported=$(read_reported "$dev")
+            realloc=$(read_realloc "$dev")
+            pending=$(read_pending "$dev")
+            offline=$(read_offline "$dev")
+            reported=$(read_reported "$dev")
 
-      log SATA_HEALTH "[$name] realloc=${realloc} pending=${pending} offline=${offline} reported=${reported}"
+            read BASE_REALLOC BASE_PENDING BASE_OFFLINE BASE_REPORTED BASE_WEAR \
+                <<< "$(get_disk_Thresholds "$name")"
 
-      if (( realloc > 0 || pending > 0 || offline > 0 )); then
-        tg_send "🚨 *HDD SECTOR ERROR ALERT*
+            log SATA_HEALTH "[$name] realloc=${realloc} pending=${pending} offline=${offline} reported=${reported}"
+
+            if (( realloc > BASE_REALLOC || pending > BASE_PENDING || offline > BASE_OFFLINE )); then
+                tg_send "🚨 *HDD SECTOR ERROR ALERT*
 $HOST_NAME
 
 Drive: *$name*
-Reallocated: *$realloc*
-Pending: *$pending*
-Offline Uncorrectable: *$offline*"
-      fi
 
-      if (( reported > REPORTED_UNCORRECT_THRESHOLD_INT )); then
-        tg_send "⚠ *HDD REPORTED UNCORRECTABLE ALERT*
+Current:
+• Reallocated sectors: *$realloc*
+• Pending sectors: *$pending*
+• Offline uncorrectable sectors: *$offline*
+
+Threshold:
+• Reallocated sectors: *$BASE_REALLOC*
+• Pending sectors: *$BASE_PENDING*
+• Offline uncorrectable sectors: *$BASE_OFFLINE*"
+            fi
+
+            if (( reported > BASE_REPORTED )); then
+                tg_send "⚠ *HDD REPORTED UNCORRECTABLE SECTOR ALERT*
+
 $HOST_NAME
 
 Drive: *$name*
-Reported Errors: *$reported*
-Threshold: *$REPORTED_UNCORRECT_THRESHOLD_INT*"
-      fi
-    fi
-  done
+Current Reported Errors: *$reported*
+Warning Threshold: *$BASE_REPORTED*"
+            fi
+        fi
+    done
 }
 
 # ================= MAIN LOOP =================

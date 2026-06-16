@@ -197,8 +197,14 @@ read_realloc() {
 # ================= SSD HEALTH =================
 read_wear_value() {
   local dev="$1"
+  local wear
+  
+  wear=$(smartctl_cmd "$dev" -A 2>/dev/null | awk '/Media_Wearout_Indicator/ {print $4+0; exit}')
 
-  smartctl_cmd "$dev" -A 2>/dev/null | awk '/Media_Wearout_Indicator/ {print $4+0}'
+  # Validate the wear value is a number
+  [[ "$wear" =~ ^[0-9]+$ ]] || return 1
+
+  echo "$wear"
 }
 
 # ================= HDD HEALTH =================
@@ -218,6 +224,33 @@ read_reported() {
   local dev="$1"
 
   smartctl_cmd "$dev" -A 2>/dev/null | awk '/Reported_Uncorrect/ {print $NF+0}'
+}
+
+# ================= DISK THRESHOLDS =================
+get_disk_Thresholds() {
+    local name="$1"
+
+    case "$name" in
+        "Boot SSD")
+            echo "$BOOT_SSD_REALLOC 0 0 0 $BOOT_SSD_WEAR"
+            ;;
+
+        "Immich SSD")
+            echo "$IMMICH_SSD_REALLOC 0 0 0 $IMMICH_SSD_WEAR"
+            ;;
+
+        "Camera HDD")
+            echo "$CAMERA_HDD_REALLOC $CAMERA_HDD_PENDING $CAMERA_HDD_OFFLINE $CAMERA_HDD_REPORTED 0"
+            ;;
+
+        "Data HDD")
+            echo "$DATA_HDD_REALLOC $DATA_HDD_PENDING $DATA_HDD_OFFLINE $DATA_HDD_REPORTED 0"
+            ;;
+
+        *)
+            echo "0 0 0 0 0"
+            ;;
+    esac
 }
 
 # ================= AVERAGING =================
