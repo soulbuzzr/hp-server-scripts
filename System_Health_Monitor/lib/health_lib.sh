@@ -112,83 +112,112 @@ read_gpu_temp() {
   return 1
 }
 
-# ================= DISK DISCOVERY (INTERNAL ONLY) =================
-get_sata_devices() {
-  smartctl --scan 2>/dev/null | awk '{print $1}' | while read -r dev; do
-    # Skip if model is External HDD
-    if [ "$(disk_friendly_name "$dev")" = "External HDD" ]; then
-      continue
-    fi
+# ================= DISK MOUNT MAP =================
+declare -A DISK_MOUNTS=(
+  ["/"]="Boot SSD"
+  ["/mnt/immich"]="Immich SSD"
+  ["/mnt/camera"]="Camera HDD"
+  ["/mnt/data"]="Data HDD"
+)
 
-    echo "$dev"
+# ================= DISK DISCOVERY =================
+get_sata_devices() {
+  local mount dev
+
+  for mount in "${!DISK_MOUNTS[@]}"; do
+    dev=$(findmnt -n -o SOURCE "$mount" 2>/dev/null)
+
+    [ -n "$dev" ] || continue
+
+    # Convert partition -> disk
+    dev=$(lsblk -no PKNAME "$dev" 2>/dev/null)
+
+    [ -n "$dev" ] || continue
+
+    echo "/dev/$dev"
+  done | sort -u
+}
+
+# ================= DISK FRIENDLY NAME =================
+disk_friendly_name() {
+  local dev="$1"
+  local mount source parent
+
+  for mount in "${!DISK_MOUNTS[@]}"; do
+
+    source=$(findmnt -n -o SOURCE "$mount" 2>/dev/null)
+    [ -n "$source" ] || continue
+
+    parent=$(lsblk -no PKNAME "$source" 2>/dev/null)
+
+    if [ "/dev/$parent" = "$dev" ]; then
+      echo "${DISK_MOUNTS[$mount]}"
+      return 0
+    fi
   done
+
+  echo "$dev"
+}
+
+# ================= SMART WRAPPER =================
+smartctl_cmd() {
+  local dev="$1"
+  shift
+
+  if smartctl -i "$dev" >/dev/null 2>&1; then
+    smartctl "$@" "$dev"
+  elif smartctl -d sat -i "$dev" >/dev/null 2>&1; then
+    smartctl -d sat "$@" "$dev"
+  else
+    return 1
+  fi
 }
 
 # ================= DISK MODEL NAME =================
 disk_model_name() {
   local dev="$1"
 
-  smartctl -i "$dev" 2>/dev/null \
-    | awk -F: '/Device Model/ {gsub(/^[ \t]+/,"",$2); print $2; exit}'
-
-}
-
-# ================= DISK FRIENDLY NAME =================
-disk_friendly_name() {
-  local dev="$1"
-  local model
-
-  model=$(disk_model_name "$dev")
-
-  case "$model" in
-    *INTEL*SSD*)
-      echo "SSD"
-      ;;
-    *WDC*WD10SPZX*)
-      echo "Internal HDD"
-      ;;
-    *ST500LM000*)
-      echo "External HDD"
-      ;;
-    *)
-      echo "${model:-$dev}"
-      ;;
-  esac
+  smartctl_cmd "$dev" -i 2>/dev/null | awk -F: '/Device Model/ {gsub(/^[ \t]+/,"",$2); print $2; exit}'
 }
 
 # ================= DISK TEMPERATURE =================
 disk_temperature() {
   local dev="$1"
-  smartctl -A "$dev" 2>/dev/null \
-    | awk '$1 == 194 { print $10; exit }'
+
+  smartctl_cmd "$dev" -A 2>/dev/null | awk '$1 == 194 { print $10; exit }'
 }
 
 # ================= DISK HEALTH =================
 read_realloc() {
   local dev="$1"
-  smartctl -A "$dev" 2>/dev/null | awk '/Reallocated_Sector_Ct/ {print $NF+0}'
+
+  smartctl_cmd "$dev" -A 2>/dev/null | awk '/Reallocated_Sector_Ct/ {print $NF+0}'
 }
 
-# ================= DISK HEALTH (SSD ONLY) =================
+# ================= SSD HEALTH =================
 read_wear_value() {
   local dev="$1"
-  smartctl -A "$dev" 2>/dev/null | awk '/Media_Wearout_Indicator/ {print $4+0}'
+
+  smartctl_cmd "$dev" -A 2>/dev/null | awk '/Media_Wearout_Indicator/ {print $4+0}'
 }
 
-# ================= DISK HEALTH (HDD ONLY) =================
+# ================= HDD HEALTH =================
 read_pending() {
   local dev="$1"
-  smartctl -A "$dev" 2>/dev/null | awk '/Current_Pending_Sector/ {print $NF+0}'
+
+  smartctl_cmd "$dev" -A 2>/dev/null | awk '/Current_Pending_Sector/ {print $NF+0}'
 }
 
 read_offline() {
   local dev="$1"
-  smartctl -A "$dev" 2>/dev/null | awk '/Offline_Uncorrectable/ {print $NF+0}'
+
+  smartctl_cmd "$dev" -A 2>/dev/null | awk '/Offline_Uncorrectable/ {print $NF+0}'
 }
 
 read_reported() {
   local dev="$1"
-  smartctl -A "$dev" 2>/dev/null | awk '/Reported_Uncorrect/ {print $NF+0}'
+
+  smartctl_cmd "$dev" -A 2>/dev/null | awk '/Reported_Uncorrect/ {print $NF+0}'
 }
 
 # ================= AVERAGING =================

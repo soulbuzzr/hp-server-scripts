@@ -31,18 +31,18 @@ check_sata_health() {
   for dev in $(get_sata_devices); do
     name=$(disk_friendly_name "$dev")
 
-    # ================= SSD =================
-    if [[ "$name" == "SSD" ]]; then
-      realloc=$(read_realloc "$dev")
-      wear=$(read_wear_value "$dev")
+    # SSDs expose Media_Wearout_Indicator
+    if wear=$(read_wear_value "$dev" 2>/dev/null); then
 
-      log SATA_HEALTH "[SSD] realloc=${realloc} wear=${wear}"
+      realloc=$(read_realloc "$dev")
+
+      log SATA_HEALTH "[$name] realloc=${realloc} wear=${wear}"
 
       if (( realloc > 0 )); then
         tg_send "🚨 *SSD REALLOCATED SECTORS ALERT*
 $HOST_NAME
 
-Drive: *SSD*
+Drive: *$name*
 Reallocated Sectors: *$realloc*"
       fi
 
@@ -50,25 +50,25 @@ Reallocated Sectors: *$realloc*"
         tg_send "⚠ *SSD WEAR ALERT*
 $HOST_NAME
 
-Drive: *SSD*
+Drive: *$name*
 Life Remaining: *${wear}%*
 Warning Threshold: *${SSD_WEAR_VALUE_WARN}%*"
       fi
 
-    # ================= INTERNAL HDD =================
-    elif [[ "$name" == "Internal HDD" ]]; then
+    else
+
       realloc=$(read_realloc "$dev")
       pending=$(read_pending "$dev")
       offline=$(read_offline "$dev")
       reported=$(read_reported "$dev")
 
-      log SATA_HEALTH "[HDD] realloc=${realloc} pending=${pending} offline=${offline} reported=${reported}"
+      log SATA_HEALTH "[$name] realloc=${realloc} pending=${pending} offline=${offline} reported=${reported}"
 
       if (( realloc > 0 || pending > 0 || offline > 0 )); then
         tg_send "🚨 *HDD SECTOR ERROR ALERT*
 $HOST_NAME
 
-Drive: *Internal HDD*
+Drive: *$name*
 Reallocated: *$realloc*
 Pending: *$pending*
 Offline Uncorrectable: *$offline*"
@@ -78,7 +78,7 @@ Offline Uncorrectable: *$offline*"
         tg_send "⚠ *HDD REPORTED UNCORRECTABLE ALERT*
 $HOST_NAME
 
-Drive: *Internal HDD*
+Drive: *$name*
 Reported Errors: *$reported*
 Threshold: *$REPORTED_UNCORRECT_THRESHOLD_INT*"
       fi
