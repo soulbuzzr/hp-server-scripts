@@ -131,6 +131,22 @@ h1 {
     font-style: italic;
     color: #f59e0b;
 }
+
+.session-time {
+    margin-top: 10px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #ff5c5c;
+    text-shadow: 0 0 12px rgba(239,68,68,0.8);
+}
+
+.session-ip {
+    margin-top: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #4ade80;
+    font-family: Consolas, "Courier New", monospace;
+}
 </style>
 </head>
 
@@ -163,6 +179,11 @@ h1 {
 <div class="card">
 <div class="label">Uptime</div>
 <div id="uptime" class="small">--</div>
+</div>
+
+<div class="card">
+<div class="label">Current Session</div>
+<div id="session" class="small">--</div>
 </div>
 
 <div class="card">
@@ -469,6 +490,15 @@ async function updateStats() {
 
     document.getElementById("mini_camera").innerHTML =
         cameraHtml(d.cameras.mini);
+
+    document.getElementById("session").innerHTML =
+        "<div class='session-time'>" +
+        d.session.login_time +
+        "</div>" +
+
+        "<div class='session-ip'>" +
+        d.session.from +
+        "</div>";
 }
 
 updateStats();
@@ -1101,6 +1131,26 @@ def get_camera_status():
     return cameras
 
 
+def get_current_session():
+
+    out = run("who -u")
+
+    if not out.strip():
+        return {
+            "user": "N/A",
+            "login_time": "N/A",
+            "from": "N/A"
+        }
+
+    parts = out.split()
+
+    return {
+        "user": parts[0],
+        "login_time": f"{parts[2]} {parts[3]}",
+        "from": parts[-1].strip("()")
+    }
+
+
 def get_uptime():
 
     return run("uptime -p").strip()
@@ -1127,6 +1177,7 @@ def stats():
         "tailscale": get_interface_usage("tailscale0"),
         "immich": get_immich_status(),
         "cameras": get_camera_status(),
+        "session": get_current_session(),
         "uptime": get_uptime()
     })
 
