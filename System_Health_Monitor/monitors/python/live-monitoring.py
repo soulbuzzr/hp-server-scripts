@@ -17,6 +17,13 @@ CAMERA_RECORDINGS = {
     "mini": "/home/hpserver/Ramdisk/Camera_Recording/mini"
 }
 
+_last_immich_status = {
+    "healthy": False,
+    "containers": {}
+}
+
+_last_immich_check = 0
+
 _disk_prev = {}
 _disk_map = None
 
@@ -29,8 +36,9 @@ _last_ts_tx = None
 _last_ts_time = None
 
 _last_session = {
-    "login_time": "N/A",
-    "from": "N/A"
+    "login_time": "No session yet",
+    "from": "-",
+    "count": 0
 }
 
 app = Flask(__name__)
@@ -531,6 +539,20 @@ async function updateStats() {
 
         "<div class='session-ip'>" +
         d.session.from +
+        "</div>" +
+
+        "<div style='margin-top:10px;" +
+        "font-size:13px;" +
+        "font-weight:600;" +
+        "color:#94a3b8'>" +
+
+        (Number(d.session.count) === 0
+            ? "Last Login"
+            : d.session.count +
+            " active session" +
+            (Number(d.session.count) === 1 ? "" : "s")
+        ) +
+
         "</div>";
 
     let cmdHtml = "<div class='cmd-list'>";
@@ -1015,6 +1037,15 @@ def get_interface_usage(iface):
 
 def get_immich_status():
 
+    global _last_immich_status
+    global _last_immich_check
+
+    now = time.time()
+
+    # refresh every 10 minutes
+    if now - _last_immich_check < 600:
+        return _last_immich_status
+
     cmd = (
         f"cd {IMMICH_COMPOSE_DIR} && "
         "docker compose ps --format json"
@@ -1024,10 +1055,14 @@ def get_immich_status():
 
     if not out.strip():
 
-        return {
+        _last_immich_status = {
             "healthy": False,
             "containers": {}
         }
+
+        _last_immich_check = now
+
+        return _last_immich_status
 
     containers = {}
     all_healthy = True
@@ -1061,10 +1096,14 @@ def get_immich_status():
         except Exception:
             pass
 
-    return {
+    _last_immich_status = {
         "healthy": all_healthy,
         "containers": containers
     }
+
+    _last_immich_check = now
+
+    return _last_immich_status
 
 
 def ping_camera(ip):
@@ -1193,14 +1232,23 @@ def get_current_session():
 
     out = run("who -u")
 
-    if out.strip():
+    if not out.strip():
 
-        parts = out.split()
+        _last_session["count"] = 0
 
-        _last_session = {
-            "login_time": f"{parts[2]} {parts[3]}",
-            "from": parts[-1].strip("()")
-        }
+        return _last_session
+
+    lines = out.strip().splitlines()
+
+    session_count = len(lines)
+
+    parts = lines[-1].split()
+
+    _last_session = {
+        "login_time": f"{parts[2]} {parts[3]}",
+        "from": parts[-1].strip("()"),
+        "count": session_count
+    }
 
     return _last_session
     
