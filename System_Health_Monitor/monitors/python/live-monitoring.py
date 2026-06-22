@@ -28,6 +28,11 @@ _last_ts_rx = None
 _last_ts_tx = None
 _last_ts_time = None
 
+_last_session = {
+    "login_time": "N/A",
+    "from": "N/A"
+}
+
 app = Flask(__name__)
 
 log = logging.getLogger("werkzeug")
@@ -1184,22 +1189,20 @@ def get_camera_status():
 
 def get_current_session():
 
+    global _last_session
+
     out = run("who -u")
 
-    if not out.strip():
-        return {
-            "user": "N/A",
-            "login_time": "N/A",
-            "from": "N/A"
+    if out.strip():
+
+        parts = out.split()
+
+        _last_session = {
+            "login_time": f"{parts[2]} {parts[3]}",
+            "from": parts[-1].strip("()")
         }
 
-    parts = out.split()
-
-    return {
-        "user": parts[0],
-        "login_time": f"{parts[2]} {parts[3]}",
-        "from": parts[-1].strip("()")
-    }
+    return _last_session
     
 
 def age_string(epoch):
