@@ -1202,6 +1202,25 @@ def get_current_session():
     }
     
 
+def age_string(epoch):
+
+    diff = int(time.time() - epoch)
+
+    if diff < 60:
+        return "just now"
+
+    if diff < 3600:
+        mins = diff // 60
+        return f"{mins} min ago"
+
+    if diff < 86400:
+        hrs = diff // 3600
+        return f"{hrs} hr ago"
+
+    days = diff // 86400
+    return f"{days} day ago"
+
+
 def get_recent_commands():
 
     try:
@@ -1221,9 +1240,8 @@ def get_recent_commands():
                 and line[1:].isdigit()
             ):
 
-                timestamp = time.strftime(
-                    "%Y-%m-%d %H:%M:%S",
-                    time.localtime(int(line[1:]))
+                timestamp = age_string(
+                    int(line[1:])
                 )
 
                 continue
