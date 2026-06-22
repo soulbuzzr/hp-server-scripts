@@ -1094,8 +1094,9 @@ def get_immich_status():
         return _last_immich_status
 
     cmd = (
-        f"cd {IMMICH_COMPOSE_DIR} && "
-        "docker compose ps --format json"
+        f"docker compose "
+        f"--project-directory {IMMICH_COMPOSE_DIR} "
+        "ps --format json"
     )
 
     out = run(cmd)
