@@ -150,25 +150,34 @@ h1 {
     text-shadow: 0 0 12px rgba(239,68,68,0.8);
 }
 
+.session-ip-label {
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
 .session-ip {
-    margin-top: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #4ade80;
+    margin-top: 4px;
+    font-size: 17px;
+    font-weight: 700;
+    color: #22c55e;
     font-family: Consolas, "Courier New", monospace;
 }
 
 .session-status-active {
-    margin-top: 10px;
-    font-size: 13px;
-    font-weight: 700;
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 800;
     color: #4ade80;
 }
 
 .session-status-last {
-    margin-top: 10px;
-    font-size: 13px;
-    font-weight: 700;
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 800;
     color: #fbbf24;
 }
 
@@ -566,6 +575,10 @@ async function updateStats() {
 
         "<div class='session-time'>" +
         d.session.login_time +
+        "</div>" +
+
+        "<div class='session-ip-label'>" +
+        "Remote Address" +
         "</div>" +
 
         "<div class='session-ip'>" +
