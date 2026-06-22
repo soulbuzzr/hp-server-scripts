@@ -83,8 +83,10 @@ h1 {
 }
 
 .label {
-    color: #999;
-    font-size: 14px;
+    color: #cbd5e1;
+    font-size: 16px;
+    font-weight: 400;
+    letter-spacing: 0.2px;
 }
 
 .value {
@@ -99,9 +101,18 @@ h1 {
 }
 
 .core {
-    margin-top: 8px;
-    font-size: 14px;
-    font-weight: bold;
+    margin-top: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: "Segoe UI", Inter, Arial, sans-serif;
+    letter-spacing: 0.3px;
+}
+
+.core-label {
+    color: #94a3b8;
+    font-size: 15px;
+    font-weight: 600;
+    margin-right: 8px;
 }
 
 .green {
@@ -113,7 +124,7 @@ h1 {
 }
 
 .red {
-    color: #ef4444;
+    color: #ff5c5c;
 }
 
 .status-good {
@@ -122,7 +133,7 @@ h1 {
 }
 
 .status-bad {
-    color: #ef4444;
+    color: #ff5c5c;
     font-weight: bold;
 }
 
@@ -510,7 +521,8 @@ async function updateStats() {
 
         html += `
             <div class="core ${cls}">
-                CPU${index}: ${usage}%
+                CPU${index}
+                <span style="float:right">${usage}%</span>
             </div>
         `;
     });
