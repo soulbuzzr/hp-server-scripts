@@ -17,10 +17,7 @@ CAMERA_RECORDINGS = {
     "mini": "/home/hpserver/Ramdisk/Camera_Recording/mini"
 }
 
-_last_immich_status = {
-    "healthy": False,
-    "containers": {}
-}
+_last_immich_status = None
 
 _last_immich_check = 0
 
@@ -159,6 +156,20 @@ h1 {
     font-weight: 600;
     color: #4ade80;
     font-family: Consolas, "Courier New", monospace;
+}
+
+.session-status-active {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #4ade80;
+}
+
+.session-status-last {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fbbf24;
 }
 
 .cmd-list {
@@ -532,7 +543,27 @@ async function updateStats() {
     document.getElementById("mini_camera").innerHTML =
         cameraHtml(d.cameras.mini);
 
+    let sessionStatus = "";
+
+    if (Number(d.session.count) === 0) {
+
+        sessionStatus =
+            "<div class='session-status-last'>" +
+            "Last Login" +
+            "</div>";
+
+    } else {
+
+        sessionStatus =
+            "<div class='session-status-active'>" +
+            d.session.count +
+            " active session" +
+            (Number(d.session.count) === 1 ? "" : "s") +
+            "</div>";
+    }
+
     document.getElementById("session").innerHTML =
+
         "<div class='session-time'>" +
         d.session.login_time +
         "</div>" +
@@ -541,19 +572,7 @@ async function updateStats() {
         d.session.from +
         "</div>" +
 
-        "<div style='margin-top:10px;" +
-        "font-size:13px;" +
-        "font-weight:600;" +
-        "color:#94a3b8'>" +
-
-        (Number(d.session.count) === 0
-            ? "Last Login"
-            : d.session.count +
-            " active session" +
-            (Number(d.session.count) === 1 ? "" : "s")
-        ) +
-
-        "</div>";
+        sessionStatus;
 
     let cmdHtml = "<div class='cmd-list'>";
 
@@ -1043,7 +1062,10 @@ def get_immich_status():
     now = time.time()
 
     # refresh every 10 minutes
-    if now - _last_immich_check < 600:
+    if (
+        _last_immich_status is not None
+        and now - _last_immich_check < 600
+    ):
         return _last_immich_status
 
     cmd = (
