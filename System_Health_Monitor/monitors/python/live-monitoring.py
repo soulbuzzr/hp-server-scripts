@@ -147,6 +147,29 @@ h1 {
     color: #4ade80;
     font-family: Consolas, "Courier New", monospace;
 }
+
+.cmd-list {
+    margin-top: 10px;
+}
+
+.cmd-line {
+    margin-bottom: 12px;
+}
+
+.cmd-time {
+    color: #67e8f9;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.cmd-command {
+    color: #f8fafc;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: Consolas, "Courier New", monospace;
+    word-break: break-word;
+}
 </style>
 </head>
 
@@ -239,6 +262,11 @@ h1 {
 <div class="card">
 <div class="label">Data HDD</div>
 <div id="data_hdd" class="value">--</div>
+</div>
+
+<div class="card">
+<div class="label">Recent Commands</div>
+<div id="recent_commands" class="small">--</div>
 </div>
 
 <div class="card">
@@ -499,6 +527,29 @@ async function updateStats() {
         "<div class='session-ip'>" +
         d.session.from +
         "</div>";
+
+    let cmdHtml = "<div class='cmd-list'>";
+
+    d.recent_commands.forEach(item => {
+
+        cmdHtml +=
+            "<div class='cmd-line'>" +
+
+            "<div class='cmd-time'>" +
+            (item.time || "Unknown") +
+            "</div>" +
+
+            "<div class='cmd-command'>" +
+            item.cmd +
+            "</div>" +
+
+            "</div>";
+    });
+
+    cmdHtml += "</div>";
+
+    document.getElementById("recent_commands").innerHTML =
+        cmdHtml;
 }
 
 updateStats();
@@ -1149,6 +1200,46 @@ def get_current_session():
         "login_time": f"{parts[2]} {parts[3]}",
         "from": parts[-1].strip("()")
     }
+    
+
+def get_recent_commands():
+
+    try:
+
+        history_file = "/home/hpserver/.bash_history"
+
+        with open(history_file) as f:
+            lines = [x.rstrip() for x in f]
+
+        commands = []
+        timestamp = None
+
+        for line in lines:
+
+            if (
+                line.startswith("#")
+                and line[1:].isdigit()
+            ):
+
+                timestamp = time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(int(line[1:]))
+                )
+
+                continue
+
+            if line.strip():
+
+                commands.append({
+                    "time": timestamp,
+                    "cmd": line
+                })
+
+        return commands[-5:]
+
+    except Exception:
+
+        return []
 
 
 def get_uptime():
@@ -1178,6 +1269,7 @@ def stats():
         "immich": get_immich_status(),
         "cameras": get_camera_status(),
         "session": get_current_session(),
+        "recent_commands": get_recent_commands(),
         "uptime": get_uptime()
     })
 
