@@ -56,22 +56,43 @@ DISK_BLOCK="🗄 *Disk Health*
 
 for DEV in $(get_sata_devices); do
   NAME="$(disk_friendly_name "$DEV")"
-  [[ -n "$NAME" ]] || continue
 
-  TEMP="$(smartctl -A "$DEV" 2>/dev/null | awk '$1==194 {print $10+0}')"
-  REALLOC="$(read_realloc "$DEV")"
+  TEMP="$(disk_temperature "$DEV" || true)"
+  [[ "$TEMP" =~ ^[0-9]+$ ]] || TEMP="?"
 
-  [[ -n "$TEMP" ]] || TEMP=0
-  [[ -n "$REALLOC" ]] || REALLOC=0
+  # SSD
+  if WEAR="$(read_wear_value "$DEV" 2>/dev/null)"; then
+    REALLOC="$(read_realloc "$DEV")"
 
-  TEMP_E=$(temp_emoji "$TEMP")
-  REALLOC_E=$(health_emoji "$REALLOC")
+    read BASE_REALLOC _ _ _ BASE_WEAR \
+      <<< "$(get_disk_Thresholds "$NAME")"
 
-  DISK_BLOCK+="📀 *$NAME*
-    • 🌡️ Temp: *$TEMP°C* *$TEMP_E*
-    • ♻️ Reallocated blocks: *$REALLOC*
+    DISK_BLOCK+="📀 *$NAME*
+    • 🌡 Temp: *${TEMP}°C*
+    • ♻ Reallocated: *${REALLOC}/${BASE_REALLOC}*
+    • ❤️ Life Remaining: *${WEAR}%* 
 
 "
+
+  # HDD
+  else
+    REALLOC="$(read_realloc "$DEV")"
+    PENDING="$(read_pending "$DEV")"
+    OFFLINE="$(read_offline "$DEV")"
+    REPORTED="$(read_reported "$DEV")"
+
+    read BASE_REALLOC BASE_PENDING BASE_OFFLINE BASE_REPORTED _ \
+      <<< "$(get_disk_Thresholds "$NAME")"
+
+    DISK_BLOCK+="📀 *$NAME*
+    • 🌡 Temp: *${TEMP}°C*
+    • ♻ Reallocated: *${REALLOC}/${BASE_REALLOC}*
+    • ⏳ Pending: *${PENDING}/${BASE_PENDING}*
+    • ❌ Offline: *${OFFLINE}/${BASE_OFFLINE}*
+    • ⚠ Reported: *${REPORTED}/${BASE_REPORTED}*
+
+"
+  fi
 done
 
 # ================= GPU BLOCK (RADEON, OPTIONAL) =================
@@ -109,5 +130,5 @@ ${CPU_BLOCK}${DISK_BLOCK}${GPU_BLOCK}${MEM_BLOCK}
 🕒 *${TS}*"
 
 # ================= SEND =================
-log HOURLY "sending hourly system health report"
+log HOURLY_STATS "sending hourly system health report"
 tg_send_hourly "$MSG"
