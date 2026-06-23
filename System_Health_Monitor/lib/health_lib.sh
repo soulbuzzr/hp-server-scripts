@@ -56,6 +56,7 @@ tg_send_common() {
 }
 
 tg_send()        { tg_send_common "$TG_BOT_TOKEN" "$1"; }
+tg_send_disk()   { tg_send_common "$TG_DISK_BOT_TOKEN" "$1"; }
 tg_send_hourly() { tg_send_common "$TG_HOURLY_BOT_TOKEN" "$1"; }
 
 # ================= NETWORK =================

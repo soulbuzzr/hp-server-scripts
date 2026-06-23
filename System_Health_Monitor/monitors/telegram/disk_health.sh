@@ -57,7 +57,7 @@ check_sata_health() {
             log SATA_HEALTH "[$name] realloc=${realloc} wear=${wear}"
 
             if (( realloc > BASE_REALLOC )); then
-                tg_send "🚨 *SSD REALLOCATED SECTORS ALERT*
+                tg_send_disk "🚨 *SSD REALLOCATED SECTORS ALERT*
 $HOST_NAME
 
 Drive: *$name*
@@ -66,7 +66,7 @@ Threshold: *$BASE_REALLOC*"
             fi
 
             if (( wear < BASE_WEAR )); then
-                tg_send "⚠ *SSD WEAR ALERT*
+                tg_send_disk "⚠ *SSD WEAR ALERT*
 $HOST_NAME
 
 Drive: *$name*
@@ -88,7 +88,7 @@ Warning Threshold: *${BASE_WEAR}%*"
             log SATA_HEALTH "[$name] realloc=${realloc} pending=${pending} offline=${offline} reported=${reported}"
 
             if (( realloc > BASE_REALLOC || pending > BASE_PENDING || offline > BASE_OFFLINE )); then
-                tg_send "🚨 *HDD SECTOR ERROR ALERT*
+                tg_send_disk "🚨 *HDD SECTOR ERROR ALERT*
 $HOST_NAME
 
 Drive: *$name*
@@ -105,7 +105,7 @@ Threshold:
             fi
 
             if (( reported > BASE_REPORTED )); then
-                tg_send "⚠ *HDD REPORTED UNCORRECTABLE SECTOR ALERT*
+                tg_send_disk "⚠ *HDD REPORTED UNCORRECTABLE SECTOR ALERT*
 
 $HOST_NAME
 

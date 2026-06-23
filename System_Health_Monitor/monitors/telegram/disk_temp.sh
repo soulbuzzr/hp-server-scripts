@@ -58,7 +58,7 @@ while true; do
     log DISK_TEMP "[$NAME] temp=${TEMP}C"
 
     if (( TEMP > DISK_TEMP_WARN )); then
-      tg_send "⚠️ *DISK TEMPERATURE HIGH*
+      tg_send_disk_disk "⚠️ *DISK TEMPERATURE HIGH*
 $HOST_NAME
 
 Drive: *$NAME*
