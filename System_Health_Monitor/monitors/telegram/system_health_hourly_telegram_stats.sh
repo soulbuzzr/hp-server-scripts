@@ -30,7 +30,7 @@ cpu_emoji() {
 
 temp_emoji() {
   if [ "$1" -lt 45 ]; then echo "🟢"
-  elif [ "$1" -lt 55 ]; then echo "🟡"
+  elif [ "$1" -lt 65 ]; then echo "🟡"
   else echo "🔴"; fi
 }
 
