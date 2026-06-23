@@ -22,6 +22,8 @@ source "$HOME/System_Scripts/System_Health_Monitor/lib/health_lib.sh"
 : "${DATA_HDD_OFFLINE:?Missing DATA_HDD_OFFLINE}"
 : "${DATA_HDD_REPORTED:?Missing DATA_HDD_REPORTED}"
 
+: "${DISK_CHECK_INTERVAL:?Missing DISK_CHECK_INTERVAL}"    
+
 : "${HOST_NAME:?Missing HOST_NAME}"
 
 # ================= WAIT FOR NETWORK =================
@@ -35,7 +37,10 @@ Monitoring:
 • SSD: reallocated sectors, wear level
 • HDD: reallocated, pending, offline, reported uncorrectable sectors
 
-Interval: *6 hours*"
+Interval: *${DISK_CHECK_INTERVAL} hour(s)*"
+
+# ================= INTERVALS =================
+DISK_CHECK_INTERVAL_SEC=$(( DISK_CHECK_INTERVAL * 3600 ))
 
 # ================= SATA HEALTH CHECK =================
 check_sata_health() {
@@ -120,5 +125,5 @@ Warning Threshold: *$BASE_REPORTED*"
 # ================= MAIN LOOP =================
 while true; do
   check_sata_health
-  sleep 21600   # 6 hours
+  sleep ${DISK_CHECK_INTERVAL_SEC}
 done
