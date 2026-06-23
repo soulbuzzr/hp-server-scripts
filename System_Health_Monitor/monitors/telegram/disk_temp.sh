@@ -28,30 +28,33 @@ Intervals:
 HDD_INTERVAL_SEC=$(( HDD_CHECK_INTERVAL * 60 ))
 SSD_INTERVAL_SEC=$(( SSD_CHECK_INTERVAL * 60 ))
 
-LAST_HDD_CHECK=0
-LAST_SSD_CHECK=0
-
 # ================= MAIN LOOP =================
+# Last temperature check timestamp per device
+declare -A LAST_CHECK
+
 while true; do
   NOW=$(date +%s)
 
   for DEV in $(get_sata_devices); do
     NAME=$(disk_friendly_name "$DEV")
-    TEMP=$(disk_temperature "$DEV" || true)
-    [[ -n "$TEMP" ]] || continue
 
     if [[ "$NAME" == *SSD* ]]; then
-      (( NOW - LAST_SSD_CHECK < SSD_INTERVAL_SEC )) && continue
-      LAST_SSD_CHECK=$NOW
+      (( NOW - ${LAST_CHECK[$DEV]:-0} < SSD_INTERVAL_SEC )) && continue
 
     elif [[ "$NAME" == *HDD* ]]; then
-      (( NOW - LAST_HDD_CHECK < HDD_INTERVAL_SEC )) && continue
-      LAST_HDD_CHECK=$NOW
+      (( NOW - ${LAST_CHECK[$DEV]:-0} < HDD_INTERVAL_SEC )) && continue
 
     else
       continue
     fi
 
+    # Query SMART reported temperature
+    TEMP=$(disk_temperature "$DEV" || true)
+    [[ -n "$TEMP" ]] || continue
+
+    # Record last successful temperature check time
+    LAST_CHECK[$DEV]=$NOW
+    
     log DISK_TEMP "[$NAME] temp=${TEMP}C"
 
     if (( TEMP > DISK_TEMP_WARN )); then
