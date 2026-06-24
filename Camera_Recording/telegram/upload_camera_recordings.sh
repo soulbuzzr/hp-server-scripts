@@ -14,10 +14,14 @@ upload_new_files() {
   local ext
   local camera_dir
   ext=$(file_extension "$camera")
+  local newest_file=""
 
   camera_dir="$OUTPUT_DIR/$camera"
 
   [ ! -d "$camera_dir" ] && return
+
+  # Skip newest segment (likely still being written by FFmpeg)
+  newest_file=$(find "$camera_dir" -type f -name "*.${ext}" | sort | tail -n1)
 
   while IFS= read -r file; do
     uploaded_marker="${file}.uploaded"
@@ -27,10 +31,8 @@ upload_new_files() {
     [ -f "$uploaded_marker" ] && continue
     [ -f "$overflow_marker" ] && continue
 
-
-    # Skip if file is too new (< 2 × SEGMENT_DURATION seconds old)
-    age=$(( $(date +%s) - $(stat -c %Y "$file") ))
-    [ "$age" -lt $((2 * SEGMENT_DURATION)) ] && continue
+    # Skip newest segment
+    [ "$file" = "$newest_file" ] && continue
 
     caption=$(format_caption "$file")
 
@@ -77,7 +79,7 @@ upload_new_files() {
             rm -f "$encrypted_file"
 
             log "UPLOAD-$camera" "Encrypted upload successful"
-            sleep 60
+            sleep 2    # Safety Net for Telegram simulatenous upload limit
         else
             error_msg=$(echo "$response" | jq -r '.description // "Unknown error"')
             log "UPLOAD-$camera" "Telegram API error: $error_msg"
