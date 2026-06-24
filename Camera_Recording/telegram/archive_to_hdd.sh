@@ -82,18 +82,18 @@ merge_completed_hour() {
     hour_int=$((10#$hour))
 
     # -------- Time Blocks --------
-    if   [ "$hour_int" -le 3 ]; then
-        block="Midnight"
-    elif [ "$hour_int" -le 6 ]; then
-        block="Early Morning"
-    elif [ "$hour_int" -le 12 ]; then
-        block="Morning"
-    elif [ "$hour_int" -le 15 ]; then
-        block="Noon"
-    elif [ "$hour_int" -le 18 ]; then
-        block="Evening"
+    if   [ "$hour_int" -lt 4 ]; then
+        block="Midnight"        # 00:00 - 03:59
+    elif [ "$hour_int" -lt 8 ]; then
+        block="Early Morning"   # 04:00 - 07:59
+    elif [ "$hour_int" -lt 12 ]; then
+        block="Morning"         # 08:00 - 11:59
+    elif [ "$hour_int" -lt 16 ]; then
+        block="Noon"            # 12:00 - 15:59
+    elif [ "$hour_int" -lt 20 ]; then
+        block="Evening"         # 16:00 - 19:59
     else
-        block="Night"
+        block="Night"           # 20:00 - 23:59
     fi
 
     archive_path="$ARCHIVE_DIR/$cam_root/$year/$month_name/$day_dir/$block"
