@@ -51,9 +51,6 @@ CPU_BLOCK="🧮 *CPU*
 "
 
 # ================= DISK BLOCK (SATA) =================
-DISK_BLOCK="🗄 *Disk Health*
-"
-
 for DEV in $(get_sata_devices); do
   NAME="$(disk_friendly_name "$DEV")"
 
