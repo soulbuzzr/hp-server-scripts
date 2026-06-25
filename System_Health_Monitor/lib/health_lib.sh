@@ -20,6 +20,7 @@ fi
 source "$ENV_FILE"
 
 : "${TG_BOT_TOKEN:?Missing TG_BOT_TOKEN}"
+: "${TG_DISK_BOT_TOKEN:?Missing TG_DISK_BOT_TOKEN}"
 : "${TG_HOURLY_BOT_TOKEN:?Missing TG_HOURLY_BOT_TOKEN}"
 : "${TG_CHAT_ID:?Missing TG_CHAT_ID}"
 
