@@ -1,3 +1,4 @@
+Service running at /etc/systemd/system/cpupower-cap.service
 [Unit]
 Description=Set CPU frequency cap
 After=multi-user.target
