@@ -44,9 +44,12 @@ if ! [[ "$hour" =~ ^([01][0-9]|2[0-3])$ ]]; then
     exit 1
 fi
 
+hour_num=$((10#$hour))
+hour_dir=$(printf "%02d-%02d" "$hour_num" "$((hour_num + 1))")
+
 DOWNLOAD_DIR="${DOWNLOAD_DIR%/}"
 
-RESTORE_DIR="$DOWNLOAD_DIR/$camera/$date/$hour"
+RESTORE_DIR="$DOWNLOAD_DIR/$camera/$date/$hour_dir"
 
 EXTRACT_DIR="$RESTORE_DIR/extracted"
 
@@ -54,7 +57,7 @@ mkdir -p "$EXTRACT_DIR"
 
 echo "Camera        : $camera"
 echo "Date          : $date"
-echo "Hour          : $hour"
+echo "Hour          : $hour_dir"
 echo "Restore Dir   : $RESTORE_DIR"
 echo "Extract Dir   : $EXTRACT_DIR"
 echo
@@ -120,7 +123,7 @@ for video in "${videos[@]}"; do
     printf "file '%s'\n" "$video" >> "$LIST_FILE"
 done
 
-OUTPUT="$RESTORE_DIR/${camera}_${date}_${hour}.mp4"
+OUTPUT="$RESTORE_DIR/${camera}_${date}_${hour_dir}.mp4"
 
 ffmpeg \
     -hide_banner \
