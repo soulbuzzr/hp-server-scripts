@@ -49,3 +49,38 @@ Successfully built pyaes
 Installing collected packages: pyaes, pygments, pyasn1, mdurl, cryptg, rsa, markdown-it-py, telethon, rich
 Successfully installed cryptg-0.6.0 markdown-it-py-4.2.0 mdurl-0.1.2 pyaes-1.6.1 pyasn1-0.6.3 pygments-2.20.0 rich-15.0.0 rsa-4.9.1 telethon-1.44.0
 (.venv) hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore$ 
+
+(.venv) hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore/jobs$ python init_master_session.py 
+Please enter your phone (or bot token): +************
+Please enter the code you received: *****
+Please enter your password: 
+Signed in successfully as Soulbuzz; remember to not break the ToS or you will risk an account ban!
+
+Master session initialized
+Name     : Soulbuzz
+Username : @***********
+Phone    : ************
+
+                          Telegram Chats                          
+┏━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃ # ┃ Type ┃ Name                                   ┃    Chat ID ┃
+┡━━━╇━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
+│ 1 │ User │ Main Camera Recording                  │ ********** │
+│ 2 │ User │ HP Server Disk Health Status           │ ********** │
+│ 3 │ User │ HP Server Active Monitor Alerts        │ ********** │
+│ 4 │ User │ Telegram                               │ ********** │
+│ 5 │ User │ Asus Workstation Resource Updates      │ ********** │
+│ 6 │ User │ HP Server Resource Updates             │ ********** │
+│ 7 │ User │ Asus Workstation Active Monitor Alerts │ ********** │
+│ 8 │ User │ Asus Workstation SSD Trim Reminder     │ ********** │
+│ 9 │ User │ BotFather                              │ ********** │
+└───┴──────┴────────────────────────────────────────┴────────────┘
+
+Master session saved to
+/home/hpserver/System_Scripts/Cloud_Camera_Restore/sessions/master.session
+(.venv) hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore/jobs$ python init_worker_session.py 
+Logged in as: Soulbuzz
+Creating 30 worker session(s)...
+
+Created 30 worker sessions.
+(.venv) hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore/jobs$ 
