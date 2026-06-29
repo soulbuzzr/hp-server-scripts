@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import shutil
 import asyncio
 from asyncio import Queue, QueueEmpty
 from datetime import datetime, timedelta, timezone
@@ -66,6 +67,7 @@ DOWNLOAD = {
     "camera": target["camera"],
     "date": DATE,
     "hour": HOUR,
+    "hour_dir": f"{HOUR:02d}-{HOUR+1:02d}",
 }
 
 DOWNLOAD_WORKERS = int(target["DOWNLOAD_WORKERS"])
@@ -83,7 +85,7 @@ DOWNLOAD_DIR = (
     download_root   
     / DOWNLOAD["camera"]
     / DOWNLOAD["date"]
-    / str(DOWNLOAD["hour"])
+    / DOWNLOAD["hour_dir"]
     / "raw"
 )
 
@@ -215,6 +217,25 @@ async def download_worker(
 
 async def main():
 
+    SESSION_DIR = PROJECT_ROOT / "sessions"
+    MASTER_SESSION = SESSION_DIR / "master.session"
+
+    if not MASTER_SESSION.exists():
+        raise RuntimeError("master.session not found.")
+
+    #
+    # Reinitialize worker sessions
+    #
+
+    for file in SESSION_DIR.glob("restore*.session"):
+        file.unlink()
+
+    for i in range(1, DOWNLOAD_WORKERS + 1):
+        shutil.copy2(
+            MASTER_SESSION,
+            SESSION_DIR / f"restore{i:02d}.session",
+        )
+        
     sessions = sorted(
         (PROJECT_ROOT/"sessions").glob("restore*.session")
     )
@@ -273,7 +294,7 @@ async def main():
     console.print("Searching Telegram...")
     console.print(f"Camera         : {DOWNLOAD['camera']}")
     console.print(f"Date           : {DOWNLOAD['date']}")
-    console.print(f"Hour           : {DOWNLOAD['hour']:02d}")
+    console.print(f"Hour           : {DOWNLOAD['hour_dir']}")
     console.print(f"Filename Match : {prefix}")
 
     console.print(
