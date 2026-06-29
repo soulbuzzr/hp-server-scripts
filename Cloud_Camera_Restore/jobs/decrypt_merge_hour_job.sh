@@ -18,6 +18,32 @@ set +a
 
 : "${ENCRYPTION_PASSWORD:?ENCRYPTION_PASSWORD not set}"
 
+if (( $# != 2 )); then
+    echo "Usage: $(basename "$0") <YYYY-MM-DD> <HH>"
+    exit 1
+fi
+
+date="$1"
+hour="$2"
+
+#
+# Validate date
+#
+
+if ! date -d "$date" >/dev/null 2>&1; then
+    echo "Error: Invalid date '$date'"
+    exit 1
+fi
+
+#
+# Validate hour
+#
+
+if ! [[ "$hour" =~ ^([01][0-9]|2[0-3])$ ]]; then
+    echo "Error: Hour must be between 00 and 23"
+    exit 1
+fi
+
 DOWNLOAD_DIR="${DOWNLOAD_DIR%/}"
 
 RESTORE_DIR="$DOWNLOAD_DIR/$camera/$date/$hour"
@@ -107,6 +133,7 @@ ffmpeg \
 
 rm -rf "$EXTRACT_DIR"
 rm -rf "$RESTORE_DIR/raw"
+rm -f "$LIST_FILE"
 
 echo
 echo "Merge complete."
