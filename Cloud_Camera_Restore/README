@@ -1,0 +1,51 @@
+STEPS TO INSTALL AND RUN:
+sudo apt update
+sudo apt install python3-venv
+
+hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore$ mkdir -p env && touch env/telegram_app.env
+hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore$ python3 -m venv .venv
+hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore$ source .venv/bin/activate
+(.venv) hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore$ python -m pip install -r requirements.txt
+Collecting telethon (from -r requirements.txt (line 1))
+  Downloading telethon-1.44.0-py3-none-any.whl.metadata (4.0 kB)
+Collecting cryptg (from -r requirements.txt (line 2))
+  Downloading cryptg-0.6.0-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (1.6 kB)
+Collecting rich (from -r requirements.txt (line 3))
+  Downloading rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+Collecting pyaes (from telethon->-r requirements.txt (line 1))
+  Downloading pyaes-1.6.1.tar.gz (28 kB)
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+Collecting rsa (from telethon->-r requirements.txt (line 1))
+  Downloading rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+Collecting markdown-it-py>=2.2.0 (from rich->-r requirements.txt (line 3))
+  Downloading markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting pygments<3.0.0,>=2.13.0 (from rich->-r requirements.txt (line 3))
+  Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich->-r requirements.txt (line 3))
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting pyasn1>=0.1.3 (from rsa->telethon->-r requirements.txt (line 1))
+  Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+Downloading telethon-1.44.0-py3-none-any.whl (789 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 789.8/789.8 kB 8.6 MB/s eta 0:00:00
+Downloading cryptg-0.6.0-cp312-cp312-manylinux_2_28_x86_64.whl (250 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 250.1/250.1 kB 11.3 MB/s eta 0:00:00
+Downloading rich-15.0.0-py3-none-any.whl (310 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 310.7/310.7 kB 58.1 MB/s eta 0:00:00
+Downloading markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 91.7/91.7 kB 42.2 MB/s eta 0:00:00
+Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 13.1 MB/s eta 0:00:00
+Downloading rsa-4.9.1-py3-none-any.whl (34 kB)
+Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 84.0/84.0 kB 22.7 MB/s eta 0:00:00
+Building wheels for collected packages: pyaes
+  Building wheel for pyaes (pyproject.toml) ... done
+  Created wheel for pyaes: filename=pyaes-1.6.1-py3-none-any.whl size=26422 sha256=5ee36950f9ac966fc655dfb5e142f58a6a17e023d2c69b18139bcb8414291229
+  Stored in directory: /home/hpserver/.cache/pip/wheels/d9/43/32/ec313dd557e88e419489b9df40c04dad7b99576bde162496f8
+Successfully built pyaes
+Installing collected packages: pyaes, pygments, pyasn1, mdurl, cryptg, rsa, markdown-it-py, telethon, rich
+Successfully installed cryptg-0.6.0 markdown-it-py-4.2.0 mdurl-0.1.2 pyaes-1.6.1 pyasn1-0.6.3 pygments-2.20.0 rich-15.0.0 rsa-4.9.1 telethon-1.44.0
+(.venv) hpserver@hpelitebook8460p:~/System_Scripts/Cloud_Camera_Restore$ 

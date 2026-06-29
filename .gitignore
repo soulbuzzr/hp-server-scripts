@@ -1,3 +1,6 @@
 System_Health_Monitor/env/
 Camera_Recording/env/
 Immich/env/
+Cloud_Camera_Restore/.venv/
+Cloud_Camera_Restore/env/
+Cloud_Camera_Restore/sessions/
