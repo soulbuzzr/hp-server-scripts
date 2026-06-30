@@ -12,143 +12,107 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # --------------------------------------------------------------------
 
 set -a
-source "$PROJECT_ROOT/env/telegram_app.env"
 source "$PROJECT_ROOT/conf/restore_target.conf"
 set +a
 
-: "${ENCRYPTION_PASSWORD:?ENCRYPTION_PASSWORD not set}"
+if (( $# != 1 )); then
+    echo "Usage: $(basename "$0") <YYYY-MM-DD>"
+    exit 1
+fi
+
+date="$1"
+
+#
+# Validate date
+#
+
+if ! date -d "$date" >/dev/null 2>&1; then
+    echo "Error: Invalid date '$date'"
+    exit 1
+fi
 
 DOWNLOAD_DIR="${DOWNLOAD_DIR%/}"
 
 RESTORE_DIR="$DOWNLOAD_DIR/$camera/$date"
 
-EXTRACT_DIR="$RESTORE_DIR/extracted"
-
-mkdir -p "$EXTRACT_DIR"
+mkdir -p "$RESTORE_DIR"
 
 echo "Camera        : $camera"
 echo "Date          : $date"
 echo "Restore Dir   : $RESTORE_DIR"
-echo "Extract Dir   : $EXTRACT_DIR"
 echo
 
 # --------------------------------------------------------------------
-# Find archives
+# Decrypt and merge each hour
 # --------------------------------------------------------------------
 
-archives=("$RESTORE_DIR"/raw/*.7z)
+HOUR_SCRIPT="$SCRIPT_DIR/decrypt_merge_hour_job.sh"
 
-if (( ${#archives[@]} == 0 )); then
-    echo "No archives found."
-    exit 1
-fi
-
-echo "Found ${#archives[@]} archive(s)."
-echo
-
-echo "Beginning decryption..."
-echo
-
-THREADS=$(nproc)
-
-for archive in "${archives[@]}"; do
-    (
-        name=$(basename "$archive")
-
-        echo "Decrypting $name"
-
-        if 7z x \
-            -y \
-            -p"$ENCRYPTION_PASSWORD" \
-            -o"$EXTRACT_DIR" \
-            "$archive" \
-            >/dev/null
-        then
-            rm -f "$archive"
-            echo "✓ $name"
-        else
-            echo "✗ $name"
-            exit 1
-        fi
-    ) &
-
-    while (( $(jobs -rp | wc -l) >= THREADS )); do
-        wait -n
-    done
-done
-
-wait
-echo
-echo "Decryption complete."
-
-echo
-echo "Beginning hourly merge..."
-echo
-
-mapfile -t files < <(
-    find "$EXTRACT_DIR" \
-        -maxdepth 1 \
-        -type f \
-        -name "${camera}_${date}_*.mp4" |
-    sort
-)
-
-if (( ${#files[@]} == 0 )); then
-    echo "No extracted videos found."
-    exit 1
-fi
-
-hours=()
-last_hour=""
-
-for file in "${files[@]}"; do
-
-    name=$(basename "$file")
-
-    time_part=${name##*_}
-    hour=${time_part%%-*}
-
-    if [[ "$hour" != "$last_hour" ]]; then
-        hours+=("$hour")
-        last_hour="$hour"
-    fi
-
-done
-
-for hour in "${hours[@]}"; do
+for hour in $(seq -w 0 23); do
 
     echo
-    echo "Merging hour $hour..."
+    echo "======================================================================"
+    echo "Processing hour $hour"
+    echo "======================================================================"
+    echo
 
-    mapfile -t videos < <(
-        find "$EXTRACT_DIR" \
-            -maxdepth 1 \
-            -type f \
-            -name "${camera}_${date}_${hour}-*.mp4" |
-        sort
-    )
-
-    LIST_FILE="$RESTORE_DIR/hour_${hour}.txt"
-
-    printf "file '%s'\n" "${videos[@]}" > "$LIST_FILE"
-
-    OUTPUT="$RESTORE_DIR/${camera}_${date}_${hour}_hour.mp4"
-
-    ffmpeg \
-        -hide_banner \
-        -loglevel warning \
-        -f concat \
-        -safe 0 \
-        -i "$LIST_FILE" \
-        -c copy \
-        "$OUTPUT"
-
-    rm -f "${videos[@]}"
-    rm -f "$LIST_FILE"
-
-    echo "Created $(basename "$OUTPUT")"
+    bash "$HOUR_SCRIPT" "$date" "$hour"
 
 done
 
+# --------------------------------------------------------------------
+# Merge hourly videos into one day video
+# --------------------------------------------------------------------
+
 echo
-echo "Hourly merge complete."
+echo "Beginning day merge..."
+echo
+
+LIST_FILE="$RESTORE_DIR/day.txt"
+: > "$LIST_FILE"
+
+for hour in $(seq -w 0 23); do
+
+    hour_dir=$(printf "%02d-%02d" "$((10#$hour))" "$((10#$hour + 1))")
+
+    video="$RESTORE_DIR/$hour_dir/${camera}_${date}_${hour_dir}.mp4"
+
+    if [[ ! -f "$video" ]]; then
+        echo "Missing: $video"
+        exit 1
+    fi
+
+    printf "file '%s'\n" "$video" >> "$LIST_FILE"
+
+done
+
+OUTPUT="$RESTORE_DIR/${camera}_${date}.mp4"
+
+ffmpeg \
+    -hide_banner \
+    -loglevel warning \
+    -f concat \
+    -safe 0 \
+    -i "$LIST_FILE" \
+    -c copy \
+    "$OUTPUT"
+
+rm -f "$LIST_FILE"
+
+echo
+echo "Cleaning up hourly directories..."
+
+for hour in $(seq -w 0 23); do
+
+    hour_dir=$(printf "%02d-%02d" "$((10#$hour))" "$((10#$hour + 1))")
+
+    rm -rf "$RESTORE_DIR/$hour_dir"
+
+done
+
+echo "Cleanup complete."
+
+echo
+echo "Day merge complete."
+echo "Output:"
+echo "  $OUTPUT"
