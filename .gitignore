@@ -6,3 +6,4 @@ Cloud_Camera_Restore/env/
 Cloud_Camera_Restore/sessions/
 .venv
 .env
+session.*
