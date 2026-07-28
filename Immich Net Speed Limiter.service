@@ -1,0 +1,84 @@
+Service running at /etc/systemd/system/immich-netlimit.service
+[Unit]
+Description=240Mbps shaping on Immich bridge
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/hpserver/System_Scripts/Immich/immich-netlimit.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+
+
+Verify:
+hpserver@hpelitebook8460p:~$ tc -s qdisc show dev br-immich 
+qdisc cake 8003: root refcnt 2 bandwidth 240Mbit besteffort triple-isolate nonat nowash no-ack-filter split-gso rtt 100ms raw overhead 0 
+ Sent 112344335 bytes 86948 pkt (dropped 0, overlimits 113774 requeues 0) 
+ backlog 0b 0p requeues 0
+ memory used: 178Kb of 12000000b
+ capacity estimate: 240Mbit
+ min/max network layer size:           42 /    1294
+ min/max overhead-adjusted size:       42 /    1294
+ average network hdr offset:           14
+
+                  Tin 0
+  thresh        240Mbit
+  target            5ms
+  interval        100ms
+  pk_delay        640us
+  av_delay        246us
+  sp_delay          1us
+  backlog            0b
+  pkts            86948
+  bytes       112344335
+  way_inds            0
+  way_miss           10
+  way_cols            0
+  drops               0
+  marks               0
+  ack_drop            0
+  sp_flows            1
+  bk_flows            1
+  un_flows            0
+  max_len          2588
+  quantum          1514
+
+qdisc ingress ffff: parent ffff:fff1 ---------------- 
+ Sent 1413677 bytes 26620 pkt (dropped 0, overlimits 0 requeues 0) 
+ backlog 0b 0p requeues 0
+hpserver@hpelitebook8460p:~$ tc -s qdisc show dev ifb-immich  
+qdisc cake 8004: root refcnt 2 bandwidth 240Mbit besteffort triple-isolate nonat nowash no-ack-filter split-gso rtt 100ms raw overhead 0 
+ Sent 1786559 bytes 26624 pkt (dropped 0, overlimits 6 requeues 0) 
+ backlog 0b 0p requeues 0
+ memory used: 3248b of 12000000b
+ capacity estimate: 240Mbit
+ min/max network layer size:           42 /    1294
+ min/max overhead-adjusted size:       42 /    1294
+ average network hdr offset:           14
+
+                  Tin 0
+  thresh        240Mbit
+  target            5ms
+  interval        100ms
+  pk_delay         28us
+  av_delay          2us
+  sp_delay          1us
+  backlog            0b
+  pkts            26624
+  bytes         1786559
+  way_inds            0
+  way_miss           11
+  way_cols            0
+  drops               0
+  marks               0
+  ack_drop            0
+  sp_flows            1
+  bk_flows            1
+  un_flows            0
+  max_len          1460
+  quantum          1514
+
+hpserver@hpelitebook8460p:~$ 
