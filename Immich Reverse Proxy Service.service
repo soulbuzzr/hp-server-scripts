@@ -1,0 +1,18 @@
+/etc/systemd/system/immich-tunnel.service
+[Unit]
+Description=Immich Cloudflare quick tunnel (weekly rotation)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate --url http://localhost:2283
+Restart=always
+RestartSec=10
+RuntimeMaxSec=7d
+ExecStartPost=/home/hpserver/System_Scripts/Immich/immich-tunnel-notify.sh
+User=hpserver
+Group=hpserver
+
+[Install]
+WantedBy=multi-user.target
