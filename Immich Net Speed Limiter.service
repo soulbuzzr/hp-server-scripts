@@ -6,7 +6,7 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/hpserver/System_Scripts/Immich/immich-netlimit.sh
+ExecStart=/home/hpserver/System_Scripts/Immich/maintenance/immich-netlimit.sh
 RemainAfterExit=yes
 
 [Install]
