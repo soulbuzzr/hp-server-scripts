@@ -9,10 +9,43 @@ Type=simple
 ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate --url http://localhost:2283
 Restart=always
 RestartSec=10
-RuntimeMaxSec=7d
-ExecStartPost=/home/hpserver/System_Scripts/Immich/maintenance/immich-tunnel-notify.sh
+# with -, same failing command, unit stays fine:
+ExecStartPost=-/home/hpserver/System_Scripts/Immich/maintenance/immich-tunnel-notify.sh
 User=hpserver
 Group=hpserver
 
 [Install]
 WantedBy=multi-user.target
+
+
+Add timers to the service:
+
+root@hpelitebook8460p:~# cat /etc/systemd/system/immich-tunnel-restart.service
+[Unit]
+Description=Restart Immich tunnel (weekly rotation trigger)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart immich-tunnel.service
+
+root@hpelitebook8460p:~# cat /etc/systemd/system/immich-tunnel-restart.timer
+[Unit]
+Description=Rotate Immich tunnel every Wednesday 3AM
+
+[Timer]
+OnCalendar=Wed *-*-* 03:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+root@hpelitebook8460p:~# sudo systemctl daemon-reload
+sudo systemctl enable --now immich-tunnel-restart.timer
+Created symlink /etc/systemd/system/timers.target.wants/immich-tunnel-restart.timer → /etc/systemd/system/immich-tunnel-restart.timer.
+
+root@hpelitebook8460p:~# systemctl list-timers immich-tunnel-restart.timer
+NEXT                          LEFT LAST PASSED UNIT                        ACTIVATES                 >
+Wed 2026-08-05 03:00:00 IST 6 days -         - immich-tunnel-restart.timer immich-tunnel-restart.serv>
+
+1 timers listed.
+Pass --all to see loaded but inactive timers, too.
