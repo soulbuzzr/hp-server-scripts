@@ -47,7 +47,6 @@ if [[ "$newer" != "$latest_version" ]]; then
     exit 0   # current is somehow ahead (e.g. running a dev/rc build) — don't alert
 fi
 
-
 # 4. Plain-text message — no HTML parse_mode, since GitHub release bodies
 # contain arbitrary HTML/markdown that Telegram's HTML parser will reject
 header="🚀 Immich update available
