@@ -1,0 +1,30 @@
+Service running at /etc/systemd/system/immich-update-check.service
+
+hpserver@hpelitebook8460p:~$ systemctl cat immich-update-check.service
+# /etc/systemd/system/immich-update-check.service
+[Unit]
+Description=Check for Immich server updates and notify via Telegram
+
+[Service]
+Type=oneshot
+User=hpserver
+Group=hpserver
+ExecStart=/home/hpserver/System_Scripts/Immich/maintenance/immich-update-check.sh
+hpserver@hpelitebook8460p:~$ systemctl cat immich-update-check.timer
+# /etc/systemd/system/immich-update-check.timer
+[Unit]
+Description=Daily Immich update check at 12:00 IST
+
+[Timer]
+OnCalendar=*-*-* 12:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+hpserver@hpelitebook8460p:~$ systemctl list-timers immich-update-check.timer
+NEXT                         LEFT LAST PASSED UNIT                      ACTIVATES                  
+Thu 2026-07-30 12:00:00 IST 23min -         - immich-update-check.timer immich-update-check.service
+
+1 timers listed.
+Pass --all to see loaded but inactive timers, too.
+hpserver@hpelitebook8460p:~$ 

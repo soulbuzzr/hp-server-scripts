@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # --- pull secrets/config from the systemd EnvironmentFile ---
-# BOT_TOKEN, CHAT_ID, IMMICH_HOST, IMMICH_API_KEY expected in tunnel.env
+# PROXY_BOT_TOKEN, CHAT_ID, IMMICH_HOST, IMMICH_API_KEY expected in immich_bots.env
 
-source /home/hpserver/System_Scripts/Immich/env/tunnel.env
+source /home/hpserver/System_Scripts/Immich/env/immich_bots.env
 
 # 1. Extract the fresh tunnel URL from the just-restarted service's logs
 deadline=$((SECONDS + 90))
@@ -17,7 +17,7 @@ while (( SECONDS < deadline )); do
 done
 
 if [[ -z "$url" ]]; then
-    curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+    curl -fsS "https://api.telegram.org/bot${PROXY_BOT_TOKEN}/sendMessage" \
          -d chat_id="${CHAT_ID}" \
          --data-urlencode text="⚠️ Immich tunnel restarted but no URL found in logs — config NOT updated" \
          >/dev/null
@@ -33,7 +33,7 @@ trap 'rm -f "$tmp_config"' EXIT
 if ! curl -fsS "${IMMICH_HOST}/api/system-config" \
         -H "Accept: application/json" \
         -H "x-api-key: ${IMMICH_API_KEY}" > "$tmp_config"; then
-    curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+    curl -fsS "https://api.telegram.org/bot${PROXY_BOT_TOKEN}/sendMessage" \
          -d chat_id="${CHAT_ID}" \
          --data-urlencode text="⚠️ New tunnel URL ${url} but failed to GET Immich config" \
          >/dev/null
@@ -46,7 +46,7 @@ if ! curl -fsS -X PUT "${IMMICH_HOST}/api/system-config" \
         -H "Content-Type: application/json" \
         -H "x-api-key: ${IMMICH_API_KEY}" \
         -d "$updated_config" > /dev/null; then
-    curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+    curl -fsS "https://api.telegram.org/bot${PROXY_BOT_TOKEN}/sendMessage" \
          -d chat_id="${CHAT_ID}" \
          --data-urlencode text="⚠️ New tunnel URL ${url} but PUT to Immich config failed" \
          >/dev/null
@@ -54,7 +54,7 @@ if ! curl -fsS -X PUT "${IMMICH_HOST}/api/system-config" \
 fi
 
 # 3. Success notification
-curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+curl -fsS "https://api.telegram.org/bot${PROXY_BOT_TOKEN}/sendMessage" \
      -d chat_id="${CHAT_ID}" \
      --data-urlencode text="🔗 Immich tunnel rotated + config updated: ${url}" \
      >/dev/null

@@ -2,16 +2,16 @@
 set -euo pipefail
 
 # --- Config: pulled from EnvironmentFile ---
-# IMMICH_HOST, IMMICH_API_KEY, BOT_TOKEN, CHAT_ID expected in env
+# IMMICH_HOST, IMMICH_API_KEY, UPDATE_BOT_TOKEN, CHAT_ID expected in env
 
-source /home/hpserver/System_Scripts/Immich/env/tunnel.env
+source /home/hpserver/System_Scripts/Immich/env/immich_bots.env
 
-STATE_FILE="/home/hpserver/System_Scripts/Immich/maintenance/.immich_last_notified_version"
+STATE_FILE="/home/hpserver/Ramdisk/.immich_last_notified_version"
 GITHUB_REPO="immich-app/immich"
 
 send_telegram() {
     local text="$1"
-    curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+    curl -fsS "https://api.telegram.org/bot${UPDATE_BOT_TOKEN}/sendMessage" \
          -d chat_id="${CHAT_ID}" \
          -d parse_mode="HTML" \
          --data-urlencode text="${text}" \
@@ -53,19 +53,27 @@ if [[ -f "$STATE_FILE" ]] && [[ "$(cat "$STATE_FILE")" == "$latest_version" ]]; 
     exit 0   # already notified about this version
 fi
 
-# 5. Build Telegram message (Telegram hard cap is 4096 chars per message)
-header="🚀 <b>Immich update available</b>
-Current: <code>${current_version}</code>
-Latest:  <code>${latest_version}</code>
+# 5. Plain-text message — no HTML parse_mode, since GitHub release bodies
+# contain arbitrary HTML/markdown that Telegram's HTML parser will reject
+header="🚀 Immich update available
+Current: ${current_version}
+Latest:  ${latest_version}
 ${release_url}
 
-<b>Release notes:</b>"
+Release notes:"
 
-# Strip markdown headers/links noise a bit and cap length so header+body fits under 4096
+# Strip HTML tags, markdown image/link noise, and backticks so nothing
+# resembles a tag Telegram might try (and fail) to parse
+clean_body=$(echo "$release_body" \
+    | sed -E 's/<[^>]*>//g' \
+    | sed -E 's/!\[[^]]*\]\([^)]*\)//g' \
+    | sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g' \
+    | sed -E 's/[`*_#]//g')
+
 max_body_len=$((3800 - ${#header}))
-trimmed_body=$(echo "$release_body" | sed 's/^#\+ //g' | head -c "$max_body_len")
+trimmed_body=$(echo "$clean_body" | head -c "$max_body_len")
 
-if [[ ${#release_body} -gt ${#trimmed_body} ]]; then
+if [[ ${#clean_body} -gt ${#trimmed_body} ]]; then
     trimmed_body="${trimmed_body}...
 (truncated — see full notes at link above)"
 fi
