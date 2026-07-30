@@ -6,7 +6,6 @@ set -euo pipefail
 
 source /home/hpserver/System_Scripts/Immich/env/immich_bots.env
 
-STATE_FILE="/home/hpserver/Ramdisk/.immich_last_notified_version"
 GITHUB_REPO="immich-app/immich"
 
 send_telegram() {
@@ -48,12 +47,8 @@ if [[ "$newer" != "$latest_version" ]]; then
     exit 0   # current is somehow ahead (e.g. running a dev/rc build) — don't alert
 fi
 
-# 4. Avoid re-notifying for the same version on every daily run
-if [[ -f "$STATE_FILE" ]] && [[ "$(cat "$STATE_FILE")" == "$latest_version" ]]; then
-    exit 0   # already notified about this version
-fi
 
-# 5. Plain-text message — no HTML parse_mode, since GitHub release bodies
+# 4. Plain-text message — no HTML parse_mode, since GitHub release bodies
 # contain arbitrary HTML/markdown that Telegram's HTML parser will reject
 header="🚀 Immich update available
 Current: ${current_version}
@@ -80,6 +75,3 @@ fi
 
 send_telegram "${header}
 ${trimmed_body}"
-
-# 6. Record that we've notified for this version
-echo "$latest_version" > "$STATE_FILE"
