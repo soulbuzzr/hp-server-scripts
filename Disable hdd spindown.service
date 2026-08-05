@@ -1,0 +1,12 @@
+Service running at /etc/systemd/system/disable-hdd-spindown.service
+[Unit]
+Description=Disable spin-down on rotational HDDs
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/hpserver/System_Scripts/disable-hdd-spindown.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
