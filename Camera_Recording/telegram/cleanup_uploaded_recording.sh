@@ -16,9 +16,15 @@ while true; do
   current_hour=$(date +"%Y-%m/%d/%H")
 
   for cam in main mini; do
-    find "$BASE_DIR/$cam" -mindepth 3 -maxdepth 3 -type d | while read -r hourdir; do
+    cam_dir="$BASE_DIR/$cam"
 
-      rel="${hourdir#$BASE_DIR/$cam/}"
+    # Guard: under `set -e`, `find` on a missing dir returns non-zero and
+    # would otherwise kill this daemon (masked only by Restart=always churn).
+    [ -d "$cam_dir" ] || continue
+
+    find "$cam_dir" -mindepth 3 -maxdepth 3 -type d | while read -r hourdir; do
+
+      rel="${hourdir#$cam_dir/}"
 
       # Skip current hour
       if [ "$rel" = "$current_hour" ]; then

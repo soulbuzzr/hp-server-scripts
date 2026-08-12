@@ -44,6 +44,31 @@ log() {
   echo "$(date '+%F %T') [$1] $2" >> "$LOG_FILE"
 }
 
+# ================= DAY SUFFIX (shared) =================
+# Moved to top-level lib scope so both archive_to_hdd.sh and
+# format_caption() can call it instead of each defining it inline.
+day_suffix() {
+  case "$1" in
+    1|21|31) echo "st" ;;
+    2|22) echo "nd" ;;
+    3|23) echo "rd" ;;
+    *) echo "th" ;;
+  esac
+}
+
+# ================= CAMERA ATTRIBUTE MAP (shared) =================
+# Centralizes the main/mini -> folder name / sender-function dispatch that
+# was previously duplicated with inline if/else blocks in multiple scripts.
+camera_archive_root() {
+  case "$1" in
+    main) echo "Main-camera" ;;
+    mini) echo "Mini-camera" ;;
+    *) log "LIB" "Unknown camera type: $1"; return 1 ;;
+  esac
+}
+
+
+
 # ================= TELEGRAM CORE =================
 TG_API_BASE="https://api.telegram.org/bot"
 
@@ -80,6 +105,16 @@ cam_tg_send_file_common() {
 
 cam_main_send_file() { cam_tg_send_file_common "$TG_MAIN_CAMERA_TOKEN" "$1" "$2"; }
 cam_mini_send_file() { cam_tg_send_file_common "$TG_MINI_CAMERA_TOKEN" "$1" "$2"; }
+
+# Dispatcher so callers don't need their own main/mini if/else.
+cam_send_file() {
+  local camera="$1" file="$2" caption="$3"
+  case "$camera" in
+    main) cam_main_send_file "$file" "$caption" ;;
+    mini) cam_mini_send_file "$file" "$caption" ;;
+    *) log "LIB" "Unknown camera type: $camera"; return 1 ;;
+  esac
+}
 
 # ================= NETWORK =================
 internet_up() {
@@ -209,7 +244,26 @@ cam_record_common() {
     cam_status_send "❌ $camera camera recorder stopped"
     return 1
   fi
+}
 
+# ================= RECORDER LOOP (shared) =================
+# Both main_camera_recorder.sh and mini_camera_recorder.sh reduce to a
+# single call into this function.
+run_camera_recorder() {
+  local camera="$1"       # main | mini
+  local log_tag="$2"      # e.g. MAIN_CAMERA
+  local emoji="${3:-🎥}"
+
+  wait_for_network "$log_tag"
+
+  log "$log_tag" "Starting recording...."
+  cam_status_send "${emoji} ${camera^} camera recording started at $(date '+%F %T')"
+
+  while true; do
+    cam_record_common "$camera"
+    cam_status_send "⚠ ${camera^} camera restarting recording"
+    sleep 5
+  done
 }
 
 # ================= CAPTION HELPER =================
@@ -222,15 +276,6 @@ format_caption() {
   dt="${dt//-/ }"
 
   read -r Y M D H Min S <<< "$dt"
-
-  day_suffix() {
-    case "$1" in
-      1|21|31) echo "st" ;;
-      2|22) echo "nd" ;;
-      3|23) echo "rd" ;;
-      *) echo "th" ;;
-    esac
-  }
 
   suffix=$(day_suffix "$D")
   month=$(date -d "$Y-$M-$D" +"%b")

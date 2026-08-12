@@ -11,16 +11,6 @@ source "$HOME/System_Scripts/Camera_Recording/lib/camera_lib.sh"
 
 log "CAMERA-ARCHIVE" "Structured archive daemon started"
 
-# ================= DAY SUFFIX =================
-day_suffix() {
-  case "$1" in
-    1|21|31) echo "st" ;;
-    2|22) echo "nd" ;;
-    3|23) echo "rd" ;;
-    *) echo "th" ;;
-  esac
-}
-
 # ================= FORMAT HOUR RANGE =================
 format_hour_range() {
     local hour="$1"
@@ -40,12 +30,10 @@ merge_completed_hour() {
   local ext
   ext=$(file_extension "$camera")
 
-  # Camera folder mapping
-  if [ "$camera" = "main" ]; then
-      cam_root="Main-camera"
-  else
-      cam_root="Mini-camera"
-  fi
+  local cam_root
+  cam_root=$(camera_archive_root "$camera") || return 1
+
+  [ -d "$OUTPUT_DIR/$camera" ] || return 0
 
   current_hour=$(date +"%Y-%m/%d/%H")
 
@@ -108,14 +96,16 @@ merge_completed_hour() {
     log "MERGE-$camera" "Merging $hourdir -> $merged_file"
 
     # -------- FFmpeg Concat --------
-    ffmpeg -f concat -safe 0 \
+    # IMPORTANT: under `set -e`, checking `$?` in a separate `if` statement
+    # after the command never runs on failure -- the script dies right at
+    # the ffmpeg line instead, silently, before the log/failure branch
+    # executes. Putting the command directly in the `if` avoids that.
+    if ffmpeg -f concat -safe 0 \
       -i <(for f in "$hourdir"/*.${ext}; do
               echo "file '$f'"
            done | sort) \
       -c copy \
-      "$merged_file"
-
-    if [ $? -eq 0 ]; then
+      "$merged_file"; then
       touch "$hourdir/.merged"
       log "MERGE-$camera" "Archived successfully"
     else
@@ -134,5 +124,5 @@ while true; do
   wait
 
   sleep 60
-  
+
 done

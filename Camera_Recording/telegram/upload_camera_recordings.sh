@@ -56,17 +56,15 @@ upload_new_files() {
     encrypted_size=$(stat -c %s "$encrypted_file")
 
     if [ "$encrypted_size" -gt "$MAX_UPLOAD_SIZE" ]; then
-      log "UPLOAD-$camera" "Encrypted file too large: $encrypted_file ($encrypted_size bytes)"      
+      log "UPLOAD-$camera" "Encrypted file too large: $encrypted_file ($encrypted_size bytes)"
       touch "$overflow_marker"
       continue
     fi
 
     # -------- Send Encrypted File --------
-    if [ "$camera" = "main" ]; then
-      response=$(cam_main_send_file "$encrypted_file" "$caption" || true)
-    else
-      response=$(cam_mini_send_file "$encrypted_file" "$caption" || true)
-    fi
+    # Was: if/else dispatching to cam_main_send_file / cam_mini_send_file.
+    # Now handled centrally in the lib.
+    response=$(cam_send_file "$camera" "$encrypted_file" "$caption" || true)
 
     # -------- Validate JSON Safely --------
     if echo "$response" | jq -e . >/dev/null 2>&1; then

@@ -15,11 +15,12 @@ log "RETENTION" "Archive retention daemon started (Keep ${ARCHIVE_RETENTION_DAYS
 
 while true; do
 
-  # Calculate cutoff date
-  cutoff_date=$(date -d "-${ARCHIVE_RETENTION_DAYS} days" +%Y-%m-%d)
+  # Calculate cutoff date (as epoch seconds for a reliable comparison)
+  cutoff_epoch=$(date -d "-${ARCHIVE_RETENTION_DAYS} days" +%s)
 
-  for cam_root in "Main-camera" "Mini-camera"; do
+  for camera in main mini; do
 
+    cam_root=$(camera_archive_root "$camera") || continue
     base="$ARCHIVE_DIR/$cam_root"
 
     [ -d "$base" ] || continue
@@ -31,18 +32,18 @@ while true; do
       # Structure: /Main-camera/2026/February/25th
       year=$(echo "$daydir" | awk -F/ '{print $(NF-2)}')
       month_name=$(echo "$daydir" | awk -F/ '{print $(NF-1)}')
-      day_suffix=$(basename "$daydir")
+      day_suffix_str=$(basename "$daydir")
 
       # Remove st/nd/rd/th
-      day=$(echo "$day_suffix" | sed 's/\(st\|nd\|rd\|th\)$//')
+      day=$(echo "$day_suffix_str" | sed 's/\(st\|nd\|rd\|th\)$//')
 
-      # Convert month name to number
-      month_num=$(date -d "$month_name 1" +%m)
+      # -------- Parse to epoch (skips/logs cleanly on malformed dirs) --------
+      archive_epoch=$(date -d "$year-$month_name-$day" +%s 2>/dev/null) || {
+        log "RETENTION" "Skipping unparsable archive dir: $daydir"
+        continue
+      }
 
-      archive_date="${year}-${month_num}-${day}"
-
-      # Compare dates
-      if [[ "$archive_date" < "$cutoff_date" ]]; then
+      if [ "$archive_epoch" -lt "$cutoff_epoch" ]; then
         log "RETENTION" "Deleting old archive: $daydir"
         rm -rf "$daydir"
       fi
@@ -51,6 +52,6 @@ while true; do
 
   done
 
-  sleep 3600  
+  sleep 3600
 
 done
