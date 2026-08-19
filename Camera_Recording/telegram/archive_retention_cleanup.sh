@@ -37,8 +37,14 @@ while true; do
       # Remove st/nd/rd/th
       day=$(echo "$day_suffix_str" | sed 's/\(st\|nd\|rd\|th\)$//')
 
+      # Force base-10 to avoid octal misparse of "08"/"09", then re-pad
+      # for a clean numeric day.
+      day=$((10#$day))
+
       # -------- Parse to epoch (skips/logs cleanly on malformed dirs) --------
-      archive_epoch=$(date -d "$year-$month_name-$day" +%s 2>/dev/null) || {
+      # GNU date does NOT accept "YYYY-MonthName-DD" (hyphenated), only
+      # space-separated month-name forms. Use "Month DD YYYY" instead.
+      archive_epoch=$(date -d "$month_name $day $year" +%s 2>/dev/null) || {
         log "RETENTION" "Skipping unparsable archive dir: $daydir"
         continue
       }

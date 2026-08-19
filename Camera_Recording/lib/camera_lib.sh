@@ -45,10 +45,12 @@ log() {
 }
 
 # ================= DAY SUFFIX (shared) =================
-# Moved to top-level lib scope so both archive_to_hdd.sh and
-# format_caption() can call it instead of each defining it inline.
 day_suffix() {
-  case "$1" in
+  # Strip any leading zero so "01", "02", "03" match the case patterns
+  # the same way "1", "2", "3" do (base-10 forced to avoid octal issues
+  # with "08"/"09").
+  local d=$((10#$1))
+  case "$d" in
     1|21|31) echo "st" ;;
     2|22) echo "nd" ;;
     3|23) echo "rd" ;;
