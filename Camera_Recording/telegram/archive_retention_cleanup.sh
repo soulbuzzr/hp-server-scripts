@@ -56,6 +56,24 @@ while true; do
 
     done
 
+    # -------- Prune now-empty month and year dirs left behind --------
+    # -mindepth 1 -maxdepth 2 covers both the month level (e.g. .../2026/August)
+    # and the year level (e.g. .../2026) under $base in one pass. Sorting by
+    # depth deepest-first (via find's natural top-down order won't work for
+    # rmdir ordering, so we run it twice: months first, then years) ensures a
+    # year only gets removed after its now-empty months are gone.
+    find "$base" -mindepth 2 -maxdepth 2 -type d -empty -print0 2>/dev/null \
+      | while IFS= read -r -d '' emptymonth; do
+          log "RETENTION" "Removing empty month dir: $emptymonth"
+          rmdir "$emptymonth" 2>/dev/null || true
+        done
+
+    find "$base" -mindepth 1 -maxdepth 1 -type d -empty -print0 2>/dev/null \
+      | while IFS= read -r -d '' emptyyear; do
+          log "RETENTION" "Removing empty year dir: $emptyyear"
+          rmdir "$emptyyear" 2>/dev/null || true
+        done
+
   done
 
   sleep 3600
