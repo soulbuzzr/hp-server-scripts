@@ -1,7 +1,7 @@
 Service running at /etc/systemd/system/immich-tunnel.service
 [Unit]
 Description=Immich Cloudflare quick tunnel (weekly rotation)
-After=network-online.target
+After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
