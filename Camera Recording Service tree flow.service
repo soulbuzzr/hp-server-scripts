@@ -12,6 +12,15 @@ camera.target
 ● │ │ ├─camera-main-recorder.service
 ● │ │ ├─camera-mini-recorder.service
 
+NOTE:
+Main addition to cleanup_uploaded_recording.sh is the '[ -f "$hourdir/.merged" ] || log ...' line right before the deletion.
+It's a non-blocking check, so absence of .merged just gets logged as a warning and the deletion proceeds regardless. 
+It can be grepped  later with:
+
+grep "WARNING: deleting" "$HOME/Ramdisk/.logs/camera.log"
+
+That'll tell if archive_to_hdd.sh is ever falling more than the MAX_AGE_SECONDS converted to hours behind.
+
 Services listed by priority:
 
 1. Service running at /etc/systemd/system/camera.target
