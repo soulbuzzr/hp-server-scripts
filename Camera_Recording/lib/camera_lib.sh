@@ -132,60 +132,144 @@ wait_for_network() {
 }
 
 # ================= CAMERA DISCOVERY =================
-get_ip_from_mac() {
-  local target_mac ip attempt
 
-  target_mac=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+# ----- DISCOVER RTSP DEVICES USING NMAP -----
+discover_rtsp_devices() {
+    local output
 
-  # ----- Try arp-scan 5 times -----
-  for attempt in {1..5}; do
-    ip=$(arp-scan "$SUBNET" 2>/dev/null \
-        | awk -v m="$target_mac" 'tolower($2)==m {print $1; exit}')
+    log "DISCOVERY" "Scanning $SUBNET for RTSP port $RTSP_PORT"
 
-    if [ -n "$ip" ]; then
-      log "DISCOVERY" "Found $target_mac via arp-scan ($ip)"
-      echo "$ip"
-      return 0
+    output=$(nmap -n -sT -p "$RTSP_PORT" --open -oG - "$SUBNET" 2>/dev/null) || {
+        log "DISCOVERY" "Nmap scan failed"
+        return 1
+    }
+
+    awk -v port="$RTSP_PORT" '
+        $1 == "Host:" {
+            for (i = 1; i <= NF; i++) {
+                if ($i == "Ports:") {
+                    for (j = i + 1; j <= NF; j++) {
+                        count = split($j, entries, ",")
+                        for (k = 1; k <= count; k++) {
+                            if (index(entries[k], port "/open/tcp/") == 1) {
+                                print $2
+                                next
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ' <<< "$output" | sort -Vu
+}
+
+# ----- IDENTIFY CAMERA STREAM -----
+identify_camera_stream() {
+  local ip="$1"
+  local camera="$2"
+  local stream_info
+
+  stream_info=$(ffprobe -v error \
+    -rtsp_transport tcp \
+    -timeout "$RTSP_TIMEOUT" \
+    -show_entries stream=codec_type,codec_name,width,height \
+    -of json \
+    "rtsp://${ip}:${RTSP_PORT}${CAMERA_RTSP_PATH}" 2>/dev/null) || return 1
+
+  case "$camera" in
+    main)
+      jq -e '
+        [.streams[] |
+          select(
+            .codec_type == "video" and
+            .codec_name == "hevc" and
+            .width == 2304 and
+            .height == 2592
+          )
+        ] | length == 1
+      ' <<< "$stream_info" >/dev/null
+      ;;
+
+    mini)
+      jq -e '
+        [.streams[] |
+          select(
+            .codec_type == "video" and
+            .codec_name == "h264" and
+            .width == 1280 and
+            .height == 720
+          )
+        ] | length == 1
+      ' <<< "$stream_info" >/dev/null
+      ;;
+
+    *)
+      return 1
+      ;;
+  esac
+}
+
+
+# ----- GET CAMERA IP BY STREAM SIGNATURE -----
+get_ip_from_camera_type() {
+  local camera="$1"
+  local ip
+  local -a candidates=()
+  local -a matches=()
+
+  local candidate_output
+
+  candidate_output=$(discover_rtsp_devices) || return 1
+
+  if [[ -n "$candidate_output" ]]; then
+      mapfile -t candidates <<< "$candidate_output"
+  fi
+    if ((${#candidates[@]} == 0)); then
+      log "DISCOVERY" "No RTSP devices found"
+      return 1
     fi
-    sleep 1
+
+  log "DISCOVERY" "RTSP candidates: ${candidates[*]}"
+
+  for ip in "${candidates[@]}"; do
+    if identify_camera_stream "$ip" "$camera"; then
+      matches+=("$ip")
+      log "DISCOVERY" "$camera camera identified at $ip"
+    fi
   done
 
-  log "DISCOVERY" "ARP failed for $target_mac, trying nmap"
-
-  # ---- Fallback: nmap scan ----
-  nmap -sn "$SUBNET" >/dev/null 2>&1
-
-  ip=$(arp -an 2>/dev/null \
-      | awk -v m="$target_mac" '
-        tolower($4)==m {
-          gsub(/[()]/,"",$2);
-          print $2;
-          exit
-        }')
-
-  if [ -n "$ip" ]; then
-    log "DISCOVERY" "Found $target_mac via nmap ($ip)"
-    echo "$ip"
+  if ((${#matches[@]} == 1)); then
+    echo "${matches[0]}"
     return 0
   fi
 
-  log "DISCOVERY" "Failed to find $target_mac"
+  if ((${#matches[@]} > 1)); then
+    log "DISCOVERY" "Multiple $camera camera matches: ${matches[*]}"
+  else
+    log "DISCOVERY" "No matching stream found for $camera"
+  fi
+
   return 1
 }
 
+
+# ----- BUILD RTSP URL -----
 build_rtsp_url() {
   local cam="$1"
-  local mac ip
+  local ip
 
   case "$cam" in
-    main) mac="$MAIN_CAMERA_MAC" ;;
-    mini) mac="$MINI_CAMERA_MAC" ;;
-    *) log "LIB" "Unknown camera type: $cam"; return 1 ;;
+    main|mini) ;;
+    *)
+      log "LIB" "Unknown camera type: $cam"
+      return 1
+      ;;
   esac
 
-  ip=$(get_ip_from_mac "$mac") || return 1
+  ip=$(get_ip_from_camera_type "$cam") || return 1
 
-  echo "rtsp://${ip}:${RTSP_PORT}${CAMERA_RTSP_PATH}"
+  printf 'rtsp://%s:%s%s\n' \
+    "$ip" "$RTSP_PORT" "$CAMERA_RTSP_PATH"
 }
 
 # ================= FILE EXTENSION =================

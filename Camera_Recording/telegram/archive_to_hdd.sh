@@ -91,7 +91,7 @@ merge_completed_hour() {
     # -------- AM/PM Filename --------
     hour_range=$(format_hour_range "$hour")
 
-    merged_file="$archive_path/${hour_range}.mp4"
+    merged_file="$archive_path/${hour_range}.${ext}"
 
     log "MERGE-$camera" "Merging $hourdir -> $merged_file"
 

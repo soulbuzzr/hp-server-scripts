@@ -77,7 +77,6 @@ upload_new_files() {
             rm -f "$encrypted_file"
 
             log "UPLOAD-$camera" "Encrypted upload successful"
-            sleep 2    # Safety Net for Telegram simulatenous upload limit
         else
             error_msg=$(echo "$response" | jq -r '.description // "Unknown error"')
             log "UPLOAD-$camera" "Telegram API error: $error_msg"
@@ -92,13 +91,19 @@ upload_new_files() {
   done < <(find "$camera_dir" -type f -name "*.${ext}" | sort)
 }
 
-log "UPLOAD" "Uploader daemon started"
+CAMERA="${1:?Usage: upload_camera_recordings.sh main|mini}"
+
+case "$CAMERA" in
+    main|mini) ;;
+    *)
+        echo "Invalid camera: $CAMERA"
+        exit 2
+        ;;
+esac
+
+log "UPLOAD-$CAMERA" "Uploader daemon started"
 
 while true; do
-  upload_new_files main &
-  upload_new_files mini &
-
-  wait
-
-  sleep "$POLL_INTERVAL"
+    upload_new_files "$CAMERA"
+    sleep "$POLL_INTERVAL"
 done
