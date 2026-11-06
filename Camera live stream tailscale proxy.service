@@ -1,0 +1,48 @@
+Service running at /etc/systemd/system/<camera>-rtsp-camera-proxy.service:
+
+NOTE: UPDATE IP MANUALLY IF CHANGED IN SYSTEMED SERVICE CONFIG.
+# /etc/systemd/system/main-rtsp-camera-proxy.service 
+[Unit]
+Description=Main RTSP Camera Proxy
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat TCP-LISTEN:8554,reuseaddr,fork,keepalive TCP:192.168.1.111:554
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+
+[Install]
+WantedBy=multi-user.target
+
+
+# /etc/systemd/system/mini-rtsp-camera-proxy.service 
+[Unit]
+Description=Mini RTSP Camera Proxy
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/socat TCP-LISTEN:8555,reuseaddr,fork,keepalive TCP:192.168.1.113:554
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+
+[Install]
+WantedBy=multi-user.target
+hpserver@hpelitebook84
