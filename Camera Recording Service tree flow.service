@@ -1,29 +1,6 @@
-The below shows the flow of camera recording services:
+The below shows the order of camera recording services:
 
-hpserver@hpelitebook8460p:~$ systemctl list-dependencies camera.target --all --no-pager | grep camera
-camera.target
-● ├─camera-tree.service
-● │ ├─camera-main-recorder.service
-● │ ├─camera-mini-recorder.service
-● │ ├─camera-upload.service
-● │ │ ├─camera-archive.service
-● │ │ │ ├─camera-cleanup.service
-● │ │ │ ├─camera-retention.service
-● │ │ ├─camera-main-recorder.service
-● │ │ ├─camera-mini-recorder.service
-
-NOTE:
-Main addition to cleanup_uploaded_recording.sh is the '[ -f "$hourdir/.merged" ] || log ...' line right before the deletion.
-It's a non-blocking check, so absence of .merged just gets logged as a warning and the deletion proceeds regardless. 
-It can be grepped  later with:
-
-grep "WARNING: deleting" "$HOME/Ramdisk/.logs/camera.log"
-
-That'll tell if archive_to_hdd.sh is ever falling more than the MAX_AGE_SECONDS converted to hours behind.
-
-Services listed by priority:
-
-1. Service running at /etc/systemd/system/camera.target
+# /etc/systemd/system/camera.target
 [Unit]
 Description=Unified Camera Recording Pipeline
 After=network-online.target
@@ -33,7 +10,7 @@ Requires=camera-tree.service
 [Install]
 WantedBy=multi-user.target
 
-2. Service running at /etc/systemd/system/camera-tree.service
+# /etc/systemd/system/camera-tree.service
 [Unit]
 Description=Camera Directory Tree Service
 After=start-ramdisk.service
@@ -50,9 +27,7 @@ RestartSec=5
 [Install]
 WantedBy=camera.target
 
-3. Both camera-main-recorder.service and camera-mini-recorder.service have same priority
-
-Service running at /etc/systemd/system/camera-main-recorder.service
+# /etc/systemd/system/camera-main-recorder.service
 [Unit]
 Description=Main Camera Recorder
 After=camera-tree.service
@@ -70,7 +45,7 @@ RestartSec=5
 [Install]
 WantedBy=camera-tree.service
 
-Service running at /etc/systemd/system/camera-mini-recorder.service 
+# /etc/systemd/system/camera-mini-recorder.service
 [Unit]
 Description=Mini Camera Recorder
 After=camera-tree.service
@@ -89,36 +64,57 @@ RestartSec=5
 [Install]
 WantedBy=camera-tree.service
 
-4. Service running at /etc/systemd/system/camera-upload.service
+# /etc/systemd/system/camera-upload-main.service
 [Unit]
-Description=Camera Upload Service
+Description=Main Camera Upload Service
 
-After=camera-main-recorder.service
-After=camera-mini-recorder.service
-
-Requires=camera-main-recorder.service
-Requires=camera-mini-recorder.service
-
+Wants=network-online.target
+After=network-online.target camera-main-recorder.service
 BindsTo=camera-main-recorder.service
-BindsTo=camera-mini-recorder.service
+PartOf=camera-tree.service
 
 [Service]
 Type=simple
 User=root
-ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/upload_camera_recordings.sh
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/upload_camera_recordings.>
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=camera-tree.service
 
-5. Service running at /etc/systemd/system/camera-archive.service
+# /etc/systemd/system/camera-upload-mini.service
+[Unit]
+Description=Mini Camera Upload Service
+
+Wants=network-online.target
+After=network-online.target camera-mini-recorder.service
+BindsTo=camera-mini-recorder.service
+PartOf=camera-tree.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/upload_camera_recordings.>
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=camera-tree.service
+
+# /etc/systemd/system/camera-archive.service
 [Unit]
 Description=Camera Archive Service
-After=camera-upload.service
-Requires=camera-upload.service
-BindsTo=camera-upload.service
-PartOf=camera-upload.service
+
+Wants=camera-upload-main.service
+Wants=camera-upload-mini.service
+
+After=camera-upload-main.service
+After=camera-upload-mini.service
+
+PartOf=camera-tree.service
+
+RequiresMountsFor=/mnt/camera
 
 [Service]
 Type=simple
@@ -128,44 +124,44 @@ Restart=always
 RestartSec=10
 
 [Install]
-WantedBy=camera-upload.service 
+WantedBy=camera-tree.service 
 
-6. Both camera-cleanup.service and camera-retention.service have same priority.
-Service running at /etc/systemd/system/camera-cleanup.service 
+# /etc/systemd/system/camera-cleanup.service
 [Unit]
 Description=Camera Cleanup Service
 After=camera-archive.service
-Requires=camera-archive.service
 BindsTo=camera-archive.service
 PartOf=camera-archive.service
 
 [Service]
 Type=simple
 User=root
-ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/cleanup_uploaded_recording.sh
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/cleanup_uploaded_recordin>
 Restart=always
 RestartSec=20
 
 [Install]
-WantedBy=camera-archive.service
+WantedBy=camera-tree.service
 
-Service running at /etc/systemd/system/camera-retention.service 
+# /etc/systemd/system/camera-retention.service
 [Unit]
 Description=Camera Archive Retention Service
 After=camera-archive.service
-Requires=camera-archive.service
 BindsTo=camera-archive.service
 PartOf=camera-archive.service
+
+RequiresMountsFor=/mnt/camera
 
 [Service]
 Type=simple
 User=root
-ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/archive_retention_cleanup.sh
+ExecStart=/bin/bash /home/hpserver/System_Scripts/Camera_Recording/telegram/archive_retention_cleanup>
 Restart=always
 RestartSec=60
 
 [Install]
 WantedBy=camera-archive.service
+
 
 
 ENABLE ALL AT ONCE:
@@ -174,7 +170,8 @@ sudo systemctl enable camera.target && \
 sudo systemctl enable camera-tree.service && \
 sudo systemctl enable camera-main-recorder.service && \
 sudo systemctl enable camera-mini-recorder.service && \
-sudo systemctl enable camera-upload.service && \
+sudo systemctl enable camera-upload-main.service && \
+sudo systemctl enable camera-upload-mini.service && \
 sudo systemctl enable camera-archive.service && \
 sudo systemctl enable camera-cleanup.service && \
 sudo systemctl enable camera-retention.service
@@ -187,7 +184,8 @@ camera-main-recorder.service                                                  en
 camera-mini-recorder.service                                                  enabled         enabled
 camera-retention.service                                                      enabled         enabled
 camera-tree.service                                                           enabled         enabled
-camera-upload.service                                                         enabled         enabled
+camera-upload-main.service                                                    enabled         enabled
+camera-upload-mini.service                                                    enabled         enabled
 camera.target                                                                 enabled         enabled
 hpserver@hpelitebook8460p:~$ systemctl --failed
   UNIT LOAD ACTIVE SUB DESCRIPTION
