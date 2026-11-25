@@ -52,7 +52,7 @@ fi
 tmp_config=$(mktemp)
 trap 'rm -f "$tmp_config"' EXIT
 
-if ! curl -fsS "${IMMICH_HOST}/api/system-config" \
+if ! curl -fsS "${IMMICH_HOST}/api/admin/config" \
         -H "Accept: application/json" \
         -H "x-api-key: ${IMMICH_API_KEY}" > "$tmp_config"; then
     send_tg "⚠ New tunnel URL ${url} but failed to GET Immich config"
@@ -61,7 +61,7 @@ fi
 
 updated_config=$(jq --arg d "$url" '.server.externalDomain = $d' "$tmp_config")
 
-if ! curl -fsS -X PUT "${IMMICH_HOST}/api/system-config" \
+if ! curl -fsS -X PUT "${IMMICH_HOST}/api/admin/config" \
         -H "Content-Type: application/json" \
         -H "x-api-key: ${IMMICH_API_KEY}" \
         -d "$updated_config" > /dev/null; then
