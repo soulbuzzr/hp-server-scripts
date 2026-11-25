@@ -13,18 +13,45 @@ send_tg() {
          >/dev/null
 }
 
-# 1. Extract the fresh tunnel URL from the just-restarted service's logs
-deadline=$((SECONDS + 90))
+
+# 1. Extract fresh tunnel URL from the restarted service logs
+#    Initial attempt + 3 retries, 90 seconds per attempt.
+
+MAX_ATTEMPTS=4
+ATTEMPT_TIMEOUT=90
+RETRY_DELAY=5
+
 url=""
-while (( SECONDS < deadline )); do
+
+for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
+
+    echo "Tunnel URL discovery: attempt ${attempt}/${MAX_ATTEMPTS}"
+
+    deadline=$((SECONDS + ATTEMPT_TIMEOUT))
+
+    while (( SECONDS < deadline )); do
     url=$(journalctl -u immich-tunnel.service --since "-2 min" --no-pager -o cat \
           | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1) || true
-    [[ -n "$url" ]] && break
-    sleep 2
+        [[ -n "$url" ]] && break
+        sleep 2
+    done
+
+    if [[ -n "$url" ]]; then
+        echo "Tunnel URL discovered: $url"
+        break
+    fi
+
+    echo "Attempt ${attempt} failed: URL not found."
+
+    if (( attempt < MAX_ATTEMPTS )); then
+        echo "Retrying in ${RETRY_DELAY} seconds..."
+        sleep "$RETRY_DELAY"
+    fi
+
 done
 
 if [[ -z "$url" ]]; then
-    send_tg "⚠ Immich tunnel restarted but no URL found in logs — config NOT updated"
+    send_tg "⚠ Immich tunnel restarted but no URL found after 4 attempts — config NOT updated"
     exit 1
 fi
 
