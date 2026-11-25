@@ -7,7 +7,7 @@ import json
 
 NETWORK_INTERFACE = "enp0s25"
 IMMICH_COMPOSE_DIR = "/home/hpserver/immich-app"
-MAIN_CAMERA_IP = "192.168.1.200"
+MAIN_CAMERA_IP = "192.168.1.202"
 MINI_CAMERA_IP = "192.168.1.201"
 
 RECORDING_AGE_LIMIT = 300
@@ -1218,7 +1218,8 @@ def latest_recorded_file(camera):
 
             for f in filenames:
 
-                if not f.endswith(".mp4"):
+                # Support both main-camera MP4 and mini-camera MKV
+                if not f.lower().endswith((".mp4", ".mkv")):
                     continue
 
                 path = os.path.join(root, f)
@@ -1243,8 +1244,7 @@ def latest_recorded_file(camera):
 
     files.sort(reverse=True)
 
-    # newest file is probably still being written
-
+    # Skip newest file because FFmpeg may still be writing to it
     if len(files) >= 2:
         return files[1][1]
 
