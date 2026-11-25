@@ -9,7 +9,7 @@ Wants=network-online.target tailscaled.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/socat TCP-LISTEN:8554,reuseaddr,fork,keepalive TCP:192.168.1.111:554
+ExecStart=/usr/bin/socat TCP-LISTEN:8554,reuseaddr,fork,keepalive TCP:192.168.1.202:554
 Restart=always
 RestartSec=5
 
@@ -32,7 +32,7 @@ Wants=network-online.target tailscaled.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/socat TCP-LISTEN:8555,reuseaddr,fork,keepalive TCP:192.168.1.113:554
+ExecStart=/usr/bin/socat TCP-LISTEN:8555,reuseaddr,fork,keepalive TCP:192.168.1.201:554
 Restart=always
 RestartSec=5
 
