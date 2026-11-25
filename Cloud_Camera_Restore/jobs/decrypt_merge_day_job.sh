@@ -20,6 +20,20 @@ if (( $# != 1 )); then
     exit 1
 fi
 
+# Select original recording format for each camera
+case "$camera" in
+    main)
+        VIDEO_EXT="mp4"
+        ;;
+    mini)
+        VIDEO_EXT="mkv"
+        ;;
+    *)
+        echo "Error: Unsupported camera '$camera'"
+        exit 1
+        ;;
+esac
+
 date="$1"
 
 #
@@ -75,7 +89,7 @@ for hour in $(seq -w 0 23); do
 
     hour_dir=$(printf "%02d-%02d" "$((10#$hour))" "$((10#$hour + 1))")
 
-    video="$RESTORE_DIR/$hour_dir/${camera}_${date}_${hour_dir}.mp4"
+    video="$RESTORE_DIR/$hour_dir/${camera}_${date}_${hour_dir}.${VIDEO_EXT}"
 
     if [[ ! -f "$video" ]]; then
         echo "Missing: $video"
@@ -86,7 +100,7 @@ for hour in $(seq -w 0 23); do
 
 done
 
-OUTPUT="$RESTORE_DIR/${camera}_${date}.mp4"
+OUTPUT="$RESTORE_DIR/${camera}_${date}.${VIDEO_EXT}"
 
 ffmpeg \
     -hide_banner \

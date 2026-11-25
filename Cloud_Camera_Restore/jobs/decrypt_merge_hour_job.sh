@@ -23,6 +23,20 @@ if (( $# != 2 )); then
     exit 1
 fi
 
+# Select original recording format for each camera
+case "$camera" in
+    main)
+        VIDEO_EXT="mp4"
+        ;;
+    mini)
+        VIDEO_EXT="mkv"
+        ;;
+    *)
+        echo "Error: Unsupported camera '$camera'"
+        exit 1
+        ;;
+esac
+
 date="$1"
 hour="$2"
 
@@ -123,7 +137,7 @@ for video in "${videos[@]}"; do
     printf "file '%s'\n" "$video" >> "$LIST_FILE"
 done
 
-OUTPUT="$RESTORE_DIR/${camera}_${date}_${hour_dir}.mp4"
+OUTPUT="$RESTORE_DIR/${camera}_${date}_${hour_dir}.${VIDEO_EXT}"
 
 ffmpeg \
     -hide_banner \
