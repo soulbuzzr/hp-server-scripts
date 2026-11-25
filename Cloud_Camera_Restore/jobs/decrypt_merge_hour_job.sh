@@ -120,7 +120,7 @@ echo
 echo "Beginning merge..."
 echo
 
-videos=("$EXTRACT_DIR"/*.mp4)
+videos=("$EXTRACT_DIR"/*."$VIDEO_EXT")
 
 if (( ${#videos[@]} == 0 )); then
     echo "No extracted videos found."
