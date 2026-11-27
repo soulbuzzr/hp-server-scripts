@@ -1,0 +1,63 @@
+---
+theme: dark
+
+server:
+  address: 'tcp://:9091/'
+  endpoints:
+    authz:
+      forward-auth:
+        implementation: 'ForwardAuth'
+
+log:
+  level: info
+
+totp:
+  issuer: 'HP EliteBook Home Server'
+  algorithm: 'SHA1'
+  digits: 6
+  period: 30
+
+authentication_backend:
+  password_reset:
+    disable: true
+  file:
+    path: '/config/users_database.yml'
+    watch: true
+    password:
+      algorithm: 'argon2'
+      argon2:
+        variant: 'argon2id'
+        iterations: 3
+        memory: 65536
+        parallelism: 4
+        key_length: 32
+        salt_length: 16
+
+access_control:
+  default_policy: 'deny'
+  rules:
+    - domain: 'hpelitebook8460p.billfish-emperor.ts.net'
+      policy: 'two_factor'
+
+session:
+  name: 'authelia_session'
+  same_site: 'lax'
+  inactivity: '15m'
+  expiration: '2h'
+  remember_me: -1
+  cookies:
+    - domain: 'hpelitebook8460p.billfish-emperor.ts.net'
+      authelia_url: 'https://hpelitebook8460p.billfish-emperor.ts.net:10000'
+      default_redirection_url: 'https://hpelitebook8460p.billfish-emperor.ts.net:8443'
+
+identity_validation:
+  reset_password:
+    jwt_lifespan: '5 minutes'
+
+storage:
+  local:
+    path: '/data/db.sqlite3'
+
+notifier:
+  filesystem:
+    filename: '/data/notifications.txt'
